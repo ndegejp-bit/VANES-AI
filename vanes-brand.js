@@ -2,6 +2,7 @@
 (function(){
   const logo='/assets/vanes-logo.svg';
   const obLogo='/assets/ob-technologies-lab.svg';
+  const style=document.createElement('link');style.rel='stylesheet';style.href='/vanes-reference.css?v=20260914a';document.head.appendChild(style);
   document.querySelectorAll('.brand-mark').forEach(mark=>{mark.textContent='';const img=document.createElement('img');img.src=logo;img.alt='VANES AI';mark.appendChild(img);});
   const sidebar=document.querySelector('.sidebar');
   if(sidebar&&!sidebar.querySelector('.ob-brand')){const footer=document.createElement('div');footer.className='ob-brand';footer.innerHTML=`<span>Made by</span><img src="${obLogo}" alt="OB Technologies Lab">`;sidebar.appendChild(footer);}
