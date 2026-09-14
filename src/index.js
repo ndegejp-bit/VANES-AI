@@ -1,7 +1,6 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
-// Use a model that supports native image output through OpenRouter's chat API.
-const DEFAULT_IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const DEFAULT_IMAGE_MODEL = "openai/gpt-5.2";
 const DEFAULT_MAX_TOKENS = 2048;
 const IMAGE_MAX_TOKENS = 1024;
 const MAX_BODY = 9000000;
@@ -49,6 +48,13 @@ function readableError(value, fallback = "Image generation failed.") {
   if (nested && typeof nested === "object") return readableError(nested, fallback);
   try { const text = JSON.stringify(value); return text && text !== "{}" ? text : fallback; } catch { return fallback; }
 }
+function hasCreditError(text = "") {
+  return /(no credits|not enough credits|requires more credits|insufficient credits|credit limit|out of credits|can only afford)/i.test(text);
+}
+function fallbackImageUrl(prompt) {
+  const safePrompt = String(prompt).trim();
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&enhance=true`;
+}
 async function handleChat(request, env) {
   const headers = cors(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -76,18 +82,20 @@ async function handleImage(request, env) {
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : ""; if (!prompt) return json({ error: "Please enter an image description." }, 400, headers);
   const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : (env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL);
   try {
-    // Native image-output request. The previous hosted-tool request could succeed
-    // without returning an image payload; native modalities avoids that mismatch.
-    const upstream = await fetch(OPENROUTER_URL, { method: "POST", headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": env.APP_URL || new URL(request.url).origin, "X-Title": "VANES AI Image Generator" }, body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], modalities: ["text", "image"], max_tokens: IMAGE_MAX_TOKENS }) });
+    const upstream = await fetch(OPENROUTER_URL, { method: "POST", headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": env.APP_URL || new URL(request.url).origin, "X-Title": "VANES AI Image Generator" }, body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], tools: [{ type: "openrouter:image_generation" }], tool_choice: "required", max_tokens: IMAGE_MAX_TOKENS }) });
     const raw = await upstream.text(); let data = null; try { data = JSON.parse(raw); } catch {}
     if (!upstream.ok) return json({ error: readableError(data?.error || data, `Image generation failed (${upstream.status}).`) }, upstream.status, headers);
     if (!data) return json({ error: "The image service returned an invalid response." }, 502, headers);
     const images = extractImageUrls(data), text = extractText(data);
     if (!images.length) {
+      if (hasCreditError(text)) {
+        const imageUrl = fallbackImageUrl(prompt);
+        return json({ ok: true, model, fallback: true, fallbackProvider: "Pollinations", images: [imageUrl], text: "OpenRouter image generation is out of credits, so VANES AI used its automatic image-generation fallback." }, 200, headers);
+      }
       const message = data?.choices?.[0]?.message || {};
-      return json({ ok: false, error: "The image model responded, but no renderable image was returned.", detail: { topLevelKeys: Object.keys(data || {}), choiceKeys: Object.keys(data?.choices?.[0] || {}), messageKeys: Object.keys(message), contentType: Array.isArray(message.content) ? "array" : typeof message.content, contentPartTypes: Array.isArray(message.content) ? message.content.map(part => part?.type || typeof part) : [], text: text || null }, model }, 502, headers);
+      return json({ ok: false, error: "OpenRouter returned a response, but no image payload was present.", detail: { topLevelKeys: Object.keys(data || {}), choiceKeys: Object.keys(data?.choices?.[0] || {}), messageKeys: Object.keys(message), toolCalls: message.tool_calls || message.toolCalls || null, contentType: Array.isArray(message.content) ? "array" : typeof message.content, text: text || null }, model }, 502, headers);
     }
     return json({ ok: true, model, images, text }, 200, headers);
   } catch (error) { return json({ error: readableError(error, "Unable to reach the image generation service.") }, 502, headers); }
 }
-export default { async fetch(request, env) { const url = new URL(request.url); if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY), imageModel: env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL, maxTokens: IMAGE_MAX_TOKENS }); if (url.pathname === "/api/chat") return handleChat(request, env); if (url.pathname === "/api/image") return handleImage(request, env); return env.ASSETS.fetch(request); } };
+export default { async fetch(request, env) { const url = new URL(request.url); if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY), imageModel: env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL, maxTokens: IMAGE_MAX_TOKENS, imageFallback: "Pollinations" }); if (url.pathname === "/api/chat") return handleChat(request, env); if (url.pathname === "/api/image") return handleImage(request, env); return env.ASSETS.fetch(request); } };
