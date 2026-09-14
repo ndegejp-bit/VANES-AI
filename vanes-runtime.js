@@ -7,11 +7,11 @@ const subjects=[
 ].map(x=>({name:x[0],level:x[1],lesson:x[2],description:x[2]+'. VANES can explain, practise, analyse and revise this area.'}));
 
 // ACSEE paper structure used by VANES study cards. Science practical subjects have Paper 1,
-// Paper 2 and Paper 3; the main Advanced arts/humanities subjects have Paper 1 and Paper 2.
+// Paper 2 and Paper 3. Tanzania History and Academic Communication are single-paper subjects.
 const paperMap={
  'Physics':3,'Chemistry':3,'Biology':3,
  'Advanced Mathematics':2,'Economics':2,'History':2,'Geography':2,'Kiswahili':2,
- 'English Language':2,'Historia ya Tanzania':2,'Academic Communication':2,
+ 'English Language':2,'Historia ya Tanzania':1,'Academic Communication':1,
  'Computer Science':2,'Accountancy':2,'Commerce':2,'Business Studies':2,'Computer Applications':2
 };
 const papers=n=>Array.from({length:paperMap[n]||2},(_,i)=>`Paper ${i+1}`);
