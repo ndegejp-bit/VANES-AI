@@ -1,7 +1,9 @@
 name = "vanes-ai"
 main = "src/index.js"
 compatibility_date = "2026-09-14"
+workers_dev = true
 
 [assets]
 directory = "."
 binding = "ASSETS"
+exclude = [".git/**", ".wrangler/**"]
