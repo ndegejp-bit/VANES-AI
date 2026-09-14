@@ -25,6 +25,16 @@ function collectImages(value,out=[]){
  const url=imageUrl(value);if(url)out.push(url);
  return out;
 }
+function readableError(value){
+ if(typeof value==='string'&&value.trim())return value.trim();
+ if(value&&typeof value==='object'){
+  const nested=value.message||value.error||value.detail||value.reason;
+  if(typeof nested==='string'&&nested.trim())return nested.trim();
+  if(nested&&typeof nested==='object')return readableError(nested);
+  try{const text=JSON.stringify(value);if(text&&text!=='{}')return text;}catch{}
+ }
+ return 'Image generation failed. Please try again.';
+}
 async function generateImage(){
  const input=document.querySelector('#chatInput');if(!input)return;
  const prompt=input.value.trim()||'an accurate labelled diagram of the current study topic';
@@ -39,12 +49,13 @@ async function generateImage(){
  try{
    const controller=new AbortController();
    const timeout=setTimeout(()=>controller.abort(),120000);
-   const res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt}),signal:controller.signal});
-   clearTimeout(timeout);
+   let res;
+   try{res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt}),signal:controller.signal});}
+   finally{clearTimeout(timeout);}
    const data=await res.json().catch(()=>({}));
-   if(!res.ok)throw new Error(data.error||'Image generation failed.');
+   if(!res.ok)throw new Error(readableError(data?.error||data,`Image generation failed (${res.status}).`));
    const urls=collectImages(data.images||[]);
-   if(!urls.length)throw new Error(data.text||'No image was returned.');
+   if(!urls.length)throw new Error(readableError(data?.text||data?.error,'No image was returned.'));
    if(loading)loading.remove();
    [...new Set(urls)].forEach(url=>{
      const msg=document.createElement('div');msg.className='message assistant vanes-image-result';
@@ -57,8 +68,8 @@ async function generateImage(){
    status(`Image created successfully${seconds?` in ${seconds}s`:''}.`);
    if(box)box.scrollTop=box.scrollHeight;
  }catch(err){
-   const message=err?.name==='AbortError'?'The image service took too long to respond. Please try again.':String(err?.message||err);
-   if(loading)loading.innerHTML='<div class="vanes-image-loading">⚠ '+message+'</div>';
+   const message=err?.name==='AbortError'?'The image service took too long to respond. Please try again.':readableError(err?.message||err);
+   if(loading)loading.innerHTML='<div class="vanes-image-loading">⚠ '+message.replace(/[<>]/g,'')+'</div>';
    status('Image generation failed.');
  }finally{if(button){button.disabled=false;button.textContent='✧';}}
 }
