@@ -23,6 +23,9 @@ function cors(origin) {
 function collectImageUrls(value, output = []) {
   if (typeof value === "string") {
     if (/^(https?:\/\/|data:image\/)/i.test(value)) output.push(value);
+    else if (/^[\[{]/.test(value.trim())) {
+      try { collectImageUrls(JSON.parse(value), output); } catch {}
+    }
     return output;
   }
   if (!value || typeof value !== "object") return output;
@@ -37,6 +40,9 @@ function collectImageUrls(value, output = []) {
   if (value.arguments && typeof value.arguments === "string") {
     try { collectImageUrls(JSON.parse(value.arguments), output); } catch {}
   }
+  Object.values(value).forEach(item => {
+    if (item && typeof item === "object") collectImageUrls(item, output);
+  });
   return output;
 }
 
@@ -120,6 +126,7 @@ async function handleImage(request, env) {
         model,
         messages: [{ role: "user", content: prompt }],
         tools: [{ type: "openrouter:image_generation" }],
+        tool_choice: "required",
         max_tokens: DEFAULT_MAX_TOKENS
       })
     });
@@ -133,7 +140,7 @@ async function handleImage(request, env) {
     const images = extractImageUrls(data);
     const text = extractText(data);
     if (!images.length) {
-      return json({ ok: false, error: text || "The image service completed without returning an image. Please try again.", model }, 502, headers);
+      return json({ ok: false, error: "The image-generation tool did not return an image. Please try again.", detail: text || null, model }, 502, headers);
     }
     return json({ ok: true, model, images, text }, 200, headers);
   } catch (error) {
