@@ -26,18 +26,27 @@ function collectImages(value, output = [], mime = "image/png", seen = new WeakSe
   if (Array.isArray(value)) { value.forEach(v => collectImages(v, output, mime, seen)); return output; }
   if (typeof value !== "object" || seen.has(value)) return output;
   seen.add(value);
-  const localMime = value.mime_type || value.media_type || value.content_type || mime;
-  for (const key of ["url", "image_url", "image", "images", "output", "outputs", "result", "results", "content", "data", "file", "files", "artifact", "artifacts", "generated_images", "generatedImages", "response", "tool_result", "toolResult"]) if (value[key] != null) collectImages(value[key], output, localMime, seen);
-  for (const key of ["b64_json", "base64", "image_base64", "imageData", "image_data", "bytes"]) if (typeof value[key] === "string") { const image = toImage(value[key], localMime); if (image) output.push(image); }
+  const localMime = value.mime_type || value.mimeType || value.media_type || value.content_type || value.contentType || mime;
+  for (const key of ["url", "image_url", "imageUrl", "image", "images", "output", "outputs", "result", "results", "content", "data", "file", "files", "artifact", "artifacts", "generated_images", "generatedImages", "response", "tool_result", "toolResult", "source", "uri"]) if (value[key] != null) collectImages(value[key], output, localMime, seen);
+  for (const key of ["b64_json", "base64", "image_base64", "imageData", "image_data", "bytes", "base64_data", "base64Data"]) if (typeof value[key] === "string") { const image = toImage(value[key], localMime); if (image) output.push(image); }
   if (typeof value.arguments === "string") collectImages(value.arguments, output, localMime, seen); else if (value.arguments) collectImages(value.arguments, output, localMime, seen);
   if (typeof value.input === "string") collectImages(value.input, output, localMime, seen); else if (value.input) collectImages(value.input, output, localMime, seen);
   return output;
 }
-function extractImageUrls(data) { return [...new Set(collectImages(data, []))]; }
+function extractImageUrls(data) {
+  const output = collectImages(data, []);
+  const message = data?.choices?.[0]?.message;
+  if (message) {
+    collectImages(message.images, output);
+    collectImages(message.content, output);
+  }
+  return [...new Set(output)];
+}
 function extractText(data) {
   const content = data?.choices?.[0]?.message?.content;
   if (typeof content === "string") return content;
   if (Array.isArray(content)) return content.map(part => typeof part === "string" ? part : (part?.text || "")).filter(Boolean).join("\n");
+  if (content && typeof content === "object") return content.text || content.output_text || "";
   return "";
 }
 function readableError(value, fallback = "Image generation failed.") {
@@ -48,13 +57,8 @@ function readableError(value, fallback = "Image generation failed.") {
   if (nested && typeof nested === "object") return readableError(nested, fallback);
   try { const text = JSON.stringify(value); return text && text !== "{}" ? text : fallback; } catch { return fallback; }
 }
-function hasCreditError(text = "") {
-  return /(no credits|not enough credits|requires more credits|insufficient credits|credit limit|out of credits|can only afford)/i.test(text);
-}
-function fallbackImageUrl(prompt) {
-  const safePrompt = String(prompt).trim();
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=1024&height=1024&nologo=true&enhance=true`;
-}
+function hasCreditError(text = "") { return /(no credits|not enough credits|requires more credits|insufficient credits|credit limit|out of credits|can only afford)/i.test(text); }
+function fallbackImageUrl(prompt) { return `https://image.pollinations.ai/prompt/${encodeURIComponent(String(prompt).trim())}?width=1024&height=1024&nologo=true&enhance=true`; }
 async function handleChat(request, env) {
   const headers = cors(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -88,12 +92,9 @@ async function handleImage(request, env) {
     if (!data) return json({ error: "The image service returned an invalid response." }, 502, headers);
     const images = extractImageUrls(data), text = extractText(data);
     if (!images.length) {
-      if (hasCreditError(text)) {
-        const imageUrl = fallbackImageUrl(prompt);
-        return json({ ok: true, model, fallback: true, fallbackProvider: "Pollinations", images: [imageUrl], text: "OpenRouter image generation is out of credits, so VANES AI used its automatic image-generation fallback." }, 200, headers);
-      }
+      if (hasCreditError(text)) return json({ ok: true, model, fallback: true, fallbackProvider: "Pollinations", images: [fallbackImageUrl(prompt)], text: "OpenRouter image generation is out of credits, so VANES AI used its automatic image-generation fallback." }, 200, headers);
       const message = data?.choices?.[0]?.message || {};
-      return json({ ok: false, error: "OpenRouter returned a response, but no image payload was present.", detail: { topLevelKeys: Object.keys(data || {}), choiceKeys: Object.keys(data?.choices?.[0] || {}), messageKeys: Object.keys(message), toolCalls: message.tool_calls || message.toolCalls || null, contentType: Array.isArray(message.content) ? "array" : typeof message.content, text: text || null }, model }, 502, headers);
+      return json({ ok: false, error: "The image model responded, but no renderable image was returned.", detail: { topLevelKeys: Object.keys(data || {}), choiceKeys: Object.keys(data?.choices?.[0] || {}), messageKeys: Object.keys(message), contentType: Array.isArray(message.content) ? "array" : typeof message.content, contentPartTypes: Array.isArray(message.content) ? message.content.map(part => part?.type || typeof part) : [], imageKeys: message.images ? Object.keys(message.images) : [], imageCount: Array.isArray(message.images) ? message.images.length : (message.images ? 1 : 0), text: text || null }, model }, 502, headers);
     }
     return json({ ok: true, model, images, text }, 200, headers);
   } catch (error) { return json({ error: readableError(error, "Unable to reach the image generation service.") }, 502, headers); }
