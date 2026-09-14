@@ -54,6 +54,18 @@ function extractText(data) {
   return "";
 }
 
+function readableError(value, fallback = "Image generation failed.") {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (!value || typeof value !== "object") return fallback;
+  const nested = value.message || value.error || value.detail || value.reason;
+  if (typeof nested === "string" && nested.trim()) return nested.trim();
+  if (nested && typeof nested === "object") return readableError(nested, fallback);
+  try {
+    const text = JSON.stringify(value);
+    return text && text !== "{}" ? text : fallback;
+  } catch { return fallback; }
+}
+
 async function handleChat(request, env) {
   const headers = cors(request.headers.get("Origin"));
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
@@ -106,14 +118,21 @@ async function handleImage(request, env) {
       })
     });
     const raw = await upstream.text();
-    if (!upstream.ok) return new Response(raw || JSON.stringify({ error: "Image generation failed." }), { status: upstream.status, headers: { ...headers, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
-    let data;
-    try { data = JSON.parse(raw); } catch { return json({ error: "The image service returned an invalid response." }, 502, headers); }
+    let data = null;
+    try { data = JSON.parse(raw); } catch {}
+    if (!upstream.ok) {
+      return json({ error: readableError(data?.error || data, `Image generation failed (${upstream.status}).`) }, upstream.status, headers);
+    }
+    if (!data) return json({ error: "The image service returned an invalid response." }, 502, headers);
     const images = extractImageUrls(data);
-    return json({ ok: true, model, images, text: extractText(data) }, 200, headers);
+    const text = extractText(data);
+    if (!images.length) {
+      return json({ ok: false, error: text || "The image service completed without returning an image. Please try again.", model }, 502, headers);
+    }
+    return json({ ok: true, model, images, text }, 200, headers);
   } catch (error) {
     console.error("VANES image generation error", error);
-    return json({ error: "Unable to reach the image generation service." }, 502, headers);
+    return json({ error: readableError(error, "Unable to reach the image generation service.") }, 502, headers);
   }
 }
 
