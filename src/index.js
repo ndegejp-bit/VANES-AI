@@ -1,6 +1,6 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
-const DEFAULT_IMAGE_MODEL = "openai/gpt-5.2";
+const DEFAULT_IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
 const DEFAULT_MAX_TOKENS = 2048;
 const IMAGE_MAX_TOKENS = 1024;
 const MAX_BODY = 9000000;
@@ -39,6 +39,7 @@ function extractImageUrls(data) {
   if (message) {
     collectImages(message.images, output);
     collectImages(message.content, output);
+    collectImages(message.tool_calls, output);
   }
   return [...new Set(output)];
 }
