@@ -1,116 +1,79 @@
 # VANES AI
 
-![VANES AI](assets/vanes-logo.svg)
+![VANES AI product showcase](assets/vanes-product-showcase.svg)
 
-**VANES AI — Verseversatile Adaptive Neuro Emergent System** is an online, learner-friendly study companion designed around the Tanzanian secondary-school curriculum. It detects likely subject and level, explains concepts, analyses work, creates practice, organises study time, and works with study images.
+**VANES AI — Verseversatile Adaptive Neuro Emergent System** is an online, learner-friendly AI study companion designed around the Tanzanian secondary-school curriculum.
 
-![OB Technologies Lab](assets/ob-technologies-lab.svg)
+![VANES AI six turbine wheel](assets/vanes-turbine-wheel.svg)
+
+**Made by OB Technologies Lab**
+
+![OB Tech-Labs cyberpunk brain](assets/ob-tech-labs-brain.svg)
 
 ## 🚀 Use VANES online
 
-The production app is deployed as a **Cloudflare Worker** and is available at:
+The production app is deployed as a **Cloudflare Worker**:
 
 **https://vanes-ai.obtechnologies625.workers.dev**
 
-Students do not need Command Prompt, Python, Node.js, or a local server to use the public app. They can open the URL from a phone, tablet, or PC.
+Students can open the app directly from a phone, tablet, or PC. No Command Prompt, Python, Node.js, or local server is required for normal use.
 
-### Owner setup for AI
+## 🎓 Personal learner profile
 
-The frontend calls `/api/chat` on the same Cloudflare Worker. The OpenRouter secret must stay server-side.
+VANES now asks for the learner profile when the app opens for a new or incomplete profile:
 
-Create a **runtime secret** named:
+- Full name
+- **O-Level / CSEE or Advanced / A-Level**
+- O-Level: **all subjects the learner takes** can be selected
+- A-Level: the learner chooses an Advanced combination
+- A-Level common subjects: **Historia ya Tanzania** and **Academic Communication**
+- Profile context is sent to the AI so answers respond to the learner's **level, combination and subjects**, not just their name
+- Profile picture can be the VANES default, a picture from the device, or an AI-generated non-identifying avatar
 
-`OPENROUTER_API_KEY`
+Supported common Advanced combinations include **PCM, PCB, PGM, CBG, CBA, CBN, EGM, ECA, HGE, HGL, HKL, HKA, HEC and HGLi**, with an `OTHER` option for a school-specific combination.
 
-Do not put a real API key in `app.js`, browser JavaScript, README files, screenshots, or GitHub. If a key has ever been exposed, revoke/rotate it before using a replacement.
+## 📚 Study plans and AI Study Coach
 
-The Worker also exposes a safe health check at `/api/health`; it reports only whether the runtime secret is configured and never returns the secret itself.
+- Create a focused study plan from the planner
+- **Save study plans** locally and reopen them later
+- Keep up to 50 saved plans on the device
+- Full-height AI Study Coach workspace for a more immersive study session
+- Chat, practise, analyse, mark, summarise and plan
+- Upload study images for analysis
+- Generate educational images when the image service is available
+- Continue working from notes and subject topic maps
 
-## 📱 How students use VANES
+## 🧪 Tanzanian examination paper structure
 
-1. **Enter your name.** VANES creates a local learner profile on that device.
-2. **Browse subjects or ask directly.** VANES includes O-Level/CSEE and A-Level/ACSEE subject areas.
-3. **Ask VANES.** Questions can be written in English or Kiswahili.
-4. **Use study modes:** `#explain`, `#practice`, `#analyze`, `#plan`, `#summarize`, `#translate`, and `#mark`.
-5. **Upload a study image.** Use a photo of a question, handwritten work, notes, graph, diagram, or textbook page.
-6. **Use the planner and notes** to organise focused sessions.
-7. **Switch Light/Dark mode** for comfortable studying.
+VANES study cards now show the paper structure used by its curriculum mapping:
 
-## 🎓 Curriculum coverage
+- **Physics, Chemistry and Biology:** Paper 1, Paper 2 and Paper 3
+- **Most two-paper Advanced subjects:** Paper 1 and Paper 2
+- **Historia ya Tanzania:** Paper 1 only
+- **Academic Communication:** Paper 1 only
 
-The subject library includes:
+## 🧭 Curriculum coverage
 
-- Kiswahili
-- English Language
-- Basic Mathematics
-- Basic Applied Mathematics
-- Advanced Mathematics
-- History
-- Geography
-- Chemistry
-- Physics
-- Biology
-- Civics
-- Information and Computer Studies
-- Commerce
-- Bookkeeping
-- Agriculture
-- Food and Nutrition
-- Fine Art
-- Music
-- French
-- Arabic
-- Bible Knowledge
-- Islamic Knowledge
-- Physical Education
-- Economics
-- General Studies
-- Computer Science
-- Accountancy
-- Business Studies
-- Computer Applications
+### O-Level / CSEE
 
-VANES includes topic maps for many of these subjects and supports both O-Level and Advanced/A-Level contexts where applicable. Learners should verify high-stakes exam information against their current teacher, textbook, and official syllabus.
+Kiswahili, English Language, Basic Mathematics, Basic Applied Mathematics, History, Geography, Chemistry, Physics, Biology, Civics, Information and Computer Studies, Commerce, Bookkeeping, Agriculture, Food and Nutrition, Fine Art, Music, French, Arabic, Bible Knowledge, Islamic Knowledge, Physical Education, Economics, Business Studies and Computer Applications.
 
-## 🧠 Product direction
+### Advanced / A-Level
 
-The name **VANES** represents **Verseversatile Adaptive Neuro Emergent System**. The product is designed to adapt its help to the learner rather than behave like a simple question-and-answer page.
+Advanced Mathematics, Economics, History, Geography, Physics, Chemistry, Biology, Historia ya Tanzania, Academic Communication, Kiswahili, Computer Science, Accountancy, Commerce, Business Studies and Computer Applications, with combination-aware personalisation.
 
-Current functionality includes:
+## 🎨 Cyberpunk identity
 
-- Subject and level detection through AI context
-- Tanzanian curriculum-aware AI prompting
-- Multi-turn chat history
-- Streaming AI responses
-- Stop generation
-- Regenerate and edit controls
-- Markdown and code formatting
-- Copy answer and copy-code controls
-- Study-image upload and analysis foundation
-- Educational image-request workflow
-- Personal learner profile
-- Subject/topic workspace
-- Study planner
-- Local notes
-- Progress/session controls
-- Light and dark themes
-- Responsive mobile interface
-- Secure Cloudflare Worker API proxy
+VANES AI uses a new **six-turbine wheel** visual identity with a cyberpunk neon treatment. OB Technologies Lab uses a **brain surrounded by orbital halos**, also in a cyberpunk technology style. The same identity is used across the app dashboard, navigation branding and this README showcase.
 
-## 🛠️ Development
+## 🔐 AI security
 
-The app is a lightweight static frontend plus Cloudflare Worker backend. The production Worker is configured by `wrangler.toml` with `src/index.js` as the Worker entry point and the repository root as the static asset directory.
+The frontend uses the Cloudflare Worker API proxy. Keep `OPENROUTER_API_KEY` server-side as a runtime secret. Never commit a real API key to browser JavaScript, README files, screenshots, or GitHub.
 
-For local development, a developer can use any static server or Cloudflare Wrangler workflow. Students should use the public Worker URL above.
+## 🌐 Availability
 
-## 🔐 Security
-
-Never commit an OpenRouter API key. The browser sends requests only to `/api/chat`; the Worker reads `OPENROUTER_API_KEY` from its runtime secret and forwards the request to OpenRouter.
-
-## 🌐 24-hour availability
-
-The Cloudflare Worker provides the public app URL without requiring a developer's PC or Command Prompt to remain running. Students only need an internet connection.
+The Cloudflare Worker provides the public app URL without requiring a developer PC to stay on. Students only need an internet connection.
 
 ## 👨‍💻 Made by OB Technologies Lab
 
-VANES AI is a project by **OB Technologies Lab**.
+VANES AI is a project by **OB Technologies Lab** — building adaptive educational technology for Tanzanian learners.
