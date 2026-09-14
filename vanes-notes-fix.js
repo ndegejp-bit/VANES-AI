@@ -5,6 +5,7 @@ const keyFromView=()=>{const label=document.querySelector('#workspaceLabel')?.te
 const oldKey=()=>`vanes-notes-${document.querySelector('#workspaceTitle')?.textContent||'current'}`;
 const TRACK='vanes-study-tracking-v2',SUM='vanes-study-summaries-v1',STREAK='vanes-daily-streak-v2';
 const custom={
+ 'Kiswahili':{level:'A-Level',description:'Kiswahili for Advanced Secondary students, including the H-K-L combination: lugha, fasihi, uchambuzi na mawasiliano ya kitaaluma.',topics:['Sarufi na matumizi ya lugha','Fasihi simulizi','Fasihi andishi','Ushairi','Riwaya','Tamthilia','Uhakiki wa fasihi','Historia na maendeleo ya Kiswahili','Isimu','Uandishi na mawasiliano']},
  'Historia ya Tanzania':{level:'A-Level',description:'Tanzania-focused history: colonial rule, nationalism, independence, union and post-independence development.',topics:['Pre-colonial societies of Tanzania','German colonial rule','British colonial rule','Nationalism and independence','Tanganyika independence','Union of Tanganyika and Zanzibar','Tanzania after independence','Political and economic development']},
  'Academic Communication':{level:'A-Level',description:'Academic reading, writing, study skills, note taking, summaries, referencing and presentations.',topics:['Academic reading','Academic writing','Study skills','Note taking','Summarising','Referencing','Presentation skills','Academic vocabulary']}
 };
