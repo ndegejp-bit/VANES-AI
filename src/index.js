@@ -1,5 +1,6 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
+const DEFAULT_IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
 const MAX_BODY = 9000000;
 
 function json(data, status = 200, extra = {}) {
@@ -55,11 +56,68 @@ async function handleChat(request, env) {
   }
 }
 
+async function handleImage(request, env) {
+  const headers = cors(request.headers.get("Origin"));
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
+  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, headers);
+  if (!env.OPENROUTER_API_KEY) return json({ error: "The VANES AI server is not configured yet. Add the runtime secret OPENROUTER_API_KEY in Cloudflare." }, 500, headers);
+
+  const length = Number(request.headers.get("Content-Length") || 0);
+  if (length > MAX_BODY) return json({ error: "Image request is too large." }, 413, headers);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400, headers); }
+  const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+  if (!prompt) return json({ error: "Please enter an image description." }, 400, headers);
+
+  const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : (env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL);
+  try {
+    const upstream = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": env.APP_URL || new URL(request.url).origin,
+        "X-Title": "VANES AI Image Generator"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{
+          role: "user",
+          content: `Create an accurate, clean educational image for a Tanzanian student. ${prompt}`
+        }],
+        modalities: ["text", "images"],
+        stream: false
+      })
+    });
+    const raw = await upstream.text();
+    if (!upstream.ok) return new Response(raw || JSON.stringify({ error: "Image generation failed." }), { status: upstream.status, headers: { ...headers, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+    let data;
+    try { data = JSON.parse(raw); } catch { return json({ error: "The image service returned an invalid response." }, 502, headers); }
+
+    const message = data?.choices?.[0]?.message || {};
+    const images = Array.isArray(message.images) ? message.images : [];
+    const imageUrls = images.map(item => item?.image_url?.url || item?.url || (typeof item === "string" ? item : "")).filter(Boolean);
+    if (!imageUrls.length && Array.isArray(message.content)) {
+      for (const part of message.content) {
+        const url = part?.image_url?.url || part?.image?.url || part?.url;
+        if (url) imageUrls.push(url);
+      }
+    }
+    if (!imageUrls.length) return json({ error: "The selected image model did not return an image. Set VANES_IMAGE_MODEL to a model on OpenRouter that supports image output." }, 502, headers);
+    return json({ ok: true, images: imageUrls, model, text: typeof message.content === "string" ? message.content : "" }, 200, headers);
+  } catch (error) {
+    console.error("VANES image generation error", error);
+    return json({ error: "Unable to reach the image generation service." }, 502, headers);
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY) });
+    if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY), imageModel: env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL });
     if (url.pathname === "/api/chat") return handleChat(request, env);
+    if (url.pathname === "/api/image") return handleImage(request, env);
     return env.ASSETS.fetch(request);
   }
 };
