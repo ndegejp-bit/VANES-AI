@@ -2,6 +2,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 const DEFAULT_IMAGE_MODEL = "openai/gpt-5.2";
 const DEFAULT_MAX_TOKENS = 2048;
+const IMAGE_MAX_TOKENS = 1024;
 const MAX_BODY = 9000000;
 
 function json(data, status = 200, extra = {}) {
@@ -100,7 +101,7 @@ async function handleImage(request, env) {
     const upstream = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": env.APP_URL || new URL(request.url).origin, "X-Title": "VANES AI Image Generator" },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], tools: [{ type: "openrouter:image_generation" }], tool_choice: "required", max_tokens: DEFAULT_MAX_TOKENS })
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], tools: [{ type: "openrouter:image_generation" }], tool_choice: "required", max_tokens: IMAGE_MAX_TOKENS })
     });
     const raw = await upstream.text();
     let data = null; try { data = JSON.parse(raw); } catch {}
