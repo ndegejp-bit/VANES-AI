@@ -15,6 +15,16 @@ function injectImageStyles(){
  if(document.getElementById('vanes-image-styles'))return;
  const s=document.createElement('style');s.id='vanes-image-styles';s.textContent='.vanes-generated-image{display:block;width:min(100%,760px);height:auto;border-radius:16px;margin:10px 0;border:1px solid rgba(127,127,127,.25);box-shadow:0 10px 30px rgba(0,0,0,.18)}.vanes-image-result{margin-top:12px}.vanes-image-loading{padding:14px;border-radius:14px;background:rgba(127,127,127,.10)}';document.head.appendChild(s);
 }
+function imageUrl(value){
+ if(typeof value==='string')return /^(https?:\/\/|data:image\/)/i.test(value)?value:null;
+ if(!value||typeof value!=='object')return null;
+ return imageUrl(value.url)||imageUrl(value.image_url)||imageUrl(value.image);
+}
+function collectImages(value,out=[]){
+ if(Array.isArray(value)){value.forEach(v=>collectImages(v,out));return out;}
+ const url=imageUrl(value);if(url)out.push(url);
+ return out;
+}
 async function generateImage(){
  const input=document.querySelector('#chatInput');if(!input)return;
  const prompt=input.value.trim()||'an accurate labelled diagram of the current study topic';
@@ -27,11 +37,11 @@ async function generateImage(){
    const res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
    const data=await res.json().catch(()=>({}));
    if(!res.ok)throw new Error(data.error||'Image generation failed.');
-   const urls=Array.isArray(data.images)?data.images:[];
-   if(!urls.length)throw new Error('No image was returned.');
+   const urls=collectImages(data.images||[]);
+   if(!urls.length)throw new Error(data.text||'No image was returned.');
    const loading=box?.querySelector('[data-image-loading]');
    if(loading)loading.remove();
-   urls.forEach((url,i)=>{
+   [...new Set(urls)].forEach(url=>{
      const msg=document.createElement('div');msg.className='message assistant vanes-image-result';
      const img=document.createElement('img');img.className='vanes-generated-image';img.src=url;img.alt=prompt;img.loading='lazy';
      const label=document.createElement('div');label.className='message-meta';label.textContent='VANES AI · Generated study image';
