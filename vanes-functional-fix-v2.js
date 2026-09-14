@@ -13,7 +13,7 @@ function regenerate(index){
 }
 function injectImageStyles(){
  if(document.getElementById('vanes-image-styles'))return;
- const s=document.createElement('style');s.id='vanes-image-styles';s.textContent='.vanes-generated-image{display:block;width:min(100%,760px);height:auto;border-radius:16px;margin:10px 0;border:1px solid rgba(127,127,127,.25);box-shadow:0 10px 30px rgba(0,0,0,.18)}.vanes-image-result{margin-top:12px}.vanes-image-loading{padding:14px;border-radius:14px;background:rgba(127,127,127,.10)}';document.head.appendChild(s);
+ const s=document.createElement('style');s.id='vanes-image-styles';s.textContent='.vanes-generated-image{display:block;width:min(100%,760px);height:auto;border-radius:16px;margin:10px 0;border:1px solid rgba(127,127,127,.25);box-shadow:0 10px 30px rgba(0,0,0,.18)}.vanes-image-result{margin-top:12px}.vanes-image-loading{padding:16px;border-radius:14px;background:rgba(127,127,127,.10);display:flex;align-items:center;gap:10px}.vanes-image-spinner{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:vanes-spin .7s linear infinite;flex:0 0 auto}@keyframes vanes-spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);
 }
 function imageUrl(value){
  if(typeof value==='string')return /^(https?:\/\/|data:image\/)/i.test(value)?value:null;
@@ -30,16 +30,21 @@ async function generateImage(){
  const prompt=input.value.trim()||'an accurate labelled diagram of the current study topic';
  const button=document.querySelector('#generateButton');
  if(button){button.disabled=true;button.textContent='…';}
- injectImageStyles();status('VANES is creating your study image…');
+ injectImageStyles();
+ const started=Date.now();
+ status('VANES is creating your study image…');
  let box=document.querySelector('#messages');
- if(box){const loading=document.createElement('div');loading.className='message assistant vanes-image-result';loading.dataset.imageLoading='1';loading.innerHTML='<div class="vanes-image-loading">✦ Generating educational image…</div>';box.appendChild(loading);box.scrollTop=box.scrollHeight;}
+ let loading=null;
+ if(box){loading=document.createElement('div');loading.className='message assistant vanes-image-result';loading.dataset.imageLoading='1';loading.innerHTML='<div class="vanes-image-loading"><span class="vanes-image-spinner" aria-hidden="true"></span><span>Creating your image… this can take a little while.</span></div>';box.appendChild(loading);box.scrollTop=box.scrollHeight;}
  try{
-   const res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),120000);
+   const res=await fetch('/api/image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt}),signal:controller.signal});
+   clearTimeout(timeout);
    const data=await res.json().catch(()=>({}));
    if(!res.ok)throw new Error(data.error||'Image generation failed.');
    const urls=collectImages(data.images||[]);
    if(!urls.length)throw new Error(data.text||'No image was returned.');
-   const loading=box?.querySelector('[data-image-loading]');
    if(loading)loading.remove();
    [...new Set(urls)].forEach(url=>{
      const msg=document.createElement('div');msg.className='message assistant vanes-image-result';
@@ -48,10 +53,12 @@ async function generateImage(){
      msg.append(img,label);box?.appendChild(msg);
    });
    input.value='';
-   status('Image created successfully.');
+   const seconds=Math.round((Date.now()-started)/1000);
+   status(`Image created successfully${seconds?` in ${seconds}s`:''}.`);
    if(box)box.scrollTop=box.scrollHeight;
  }catch(err){
-   const loading=box?.querySelector('[data-image-loading]');if(loading)loading.innerHTML='<div class="vanes-image-loading">⚠ '+String(err.message||err)+'</div>';
+   const message=err?.name==='AbortError'?'The image service took too long to respond. Please try again.':String(err?.message||err);
+   if(loading)loading.innerHTML='<div class="vanes-image-loading">⚠ '+message+'</div>';
    status('Image generation failed.');
  }finally{if(button){button.disabled=false;button.textContent='✧';}}
 }
