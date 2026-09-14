@@ -21,4 +21,5 @@
   function applyTheme(mode){document.body.classList.toggle('dark',mode==='dark');localStorage.setItem('vanes-theme',mode);if(theme){const label=theme.querySelector('span');if(label)label.textContent=mode==='dark'?'Light mode':'Dark mode';theme.firstChild.textContent=mode==='dark'?'☀ ':'☾ ';}}
   applyTheme(localStorage.getItem('vanes-theme')==='dark'?'dark':'light');
   if(theme&&!theme.dataset.vanesBound){theme.dataset.vanesBound='1';theme.addEventListener('click',e=>{e.preventDefault();applyTheme(document.body.classList.contains('dark')?'light':'dark');});}
+  const upgrade=document.createElement('script');upgrade.src='/vanes-product-upgrade.js?v=20260914a';document.body.appendChild(upgrade);
 })();
