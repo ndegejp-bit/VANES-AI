@@ -22,9 +22,10 @@ function cors(origin) {
 
 function collectImageUrls(value, output = []) {
   if (typeof value === "string") {
-    if (/^(https?:\/\/|data:image\/)/i.test(value)) output.push(value);
-    else if (/^[\[{]/.test(value.trim())) {
-      try { collectImageUrls(JSON.parse(value), output); } catch {}
+    const text = value.trim();
+    if (/^(https?:\/\/|data:image\/)/i.test(text)) output.push(text);
+    else if (/^[\[{]/.test(text)) {
+      try { collectImageUrls(JSON.parse(text), output); } catch {}
     }
     return output;
   }
@@ -33,12 +34,20 @@ function collectImageUrls(value, output = []) {
     value.forEach(item => collectImageUrls(item, output));
     return output;
   }
-  if (typeof value.url === "string") collectImageUrls(value.url, output);
-  if (value.image_url) collectImageUrls(value.image_url, output);
-  if (value.image) collectImageUrls(value.image, output);
-  if (value.images) collectImageUrls(value.images, output);
-  if (value.arguments && typeof value.arguments === "string") {
+  for (const key of ["url", "image_url", "image", "images", "b64_json", "base64", "data"]) {
+    if (value[key] != null) {
+      if (key === "b64_json" || key === "base64") {
+        const b64 = typeof value[key] === "string" ? value[key].trim() : "";
+        if (b64) output.push(b64.startsWith("data:image/") ? b64 : `data:image/png;base64,${b64}`);
+      } else {
+        collectImageUrls(value[key], output);
+      }
+    }
+  }
+  if (typeof value.arguments === "string") {
     try { collectImageUrls(JSON.parse(value.arguments), output); } catch {}
+  } else if (value.arguments && typeof value.arguments === "object") {
+    collectImageUrls(value.arguments, output);
   }
   Object.values(value).forEach(item => {
     if (item && typeof item === "object") collectImageUrls(item, output);
@@ -48,10 +57,10 @@ function collectImageUrls(value, output = []) {
 
 function extractImageUrls(data) {
   const urls = [];
-  const message = data?.choices?.[0]?.message;
-  collectImageUrls(message?.images, urls);
-  collectImageUrls(message?.content, urls);
-  collectImageUrls(message?.tool_calls, urls);
+  collectImageUrls(data?.choices?.[0]?.message, urls);
+  collectImageUrls(data?.images, urls);
+  collectImageUrls(data?.image, urls);
+  collectImageUrls(data?.data, urls);
   return [...new Set(urls)];
 }
 
@@ -140,7 +149,7 @@ async function handleImage(request, env) {
     const images = extractImageUrls(data);
     const text = extractText(data);
     if (!images.length) {
-      return json({ ok: false, error: "The image-generation tool did not return an image. Please try again.", detail: text || null, model }, 502, headers);
+      return json({ ok: false, error: "The image-generation tool completed, but OpenRouter returned no usable image payload.", detail: text || null, model }, 502, headers);
     }
     return json({ ok: true, model, images, text }, 200, headers);
   } catch (error) {
