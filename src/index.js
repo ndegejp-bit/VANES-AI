@@ -1,6 +1,7 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 const DEFAULT_IMAGE_MODEL = "openai/gpt-5.2";
+const DEFAULT_MAX_TOKENS = 2048;
 const MAX_BODY = 9000000;
 
 function json(data, status = 200, extra = {}) {
@@ -33,6 +34,9 @@ function collectImageUrls(value, output = []) {
   if (value.image_url) collectImageUrls(value.image_url, output);
   if (value.image) collectImageUrls(value.image, output);
   if (value.images) collectImageUrls(value.images, output);
+  if (value.arguments && typeof value.arguments === "string") {
+    try { collectImageUrls(JSON.parse(value.arguments), output); } catch {}
+  }
   return output;
 }
 
@@ -78,11 +82,12 @@ async function handleChat(request, env) {
   if (!Array.isArray(body?.messages) || body.messages.length === 0) return json({ error: "messages must be a non-empty array." }, 400, headers);
   if (body.messages.length > 24) body.messages = body.messages.slice(-24);
   const model = typeof body.model === "string" && body.model.trim() ? body.model.trim() : DEFAULT_MODEL;
+  const maxTokens = Number.isFinite(Number(body.max_tokens)) ? Math.min(Math.max(Number(body.max_tokens), 256), DEFAULT_MAX_TOKENS) : DEFAULT_MAX_TOKENS;
   try {
     const upstream = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": env.APP_URL || new URL(request.url).origin, "X-Title": "VANES AI" },
-      body: JSON.stringify({ model, messages: body.messages, stream: true, temperature: 0.4 })
+      body: JSON.stringify({ model, messages: body.messages, stream: true, temperature: 0.4, max_tokens: maxTokens })
     });
     if (!upstream.ok) {
       const detail = await upstream.text();
@@ -114,7 +119,8 @@ async function handleImage(request, env) {
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: prompt }],
-        tools: [{ type: "openrouter:image_generation" }]
+        tools: [{ type: "openrouter:image_generation" }],
+        max_tokens: DEFAULT_MAX_TOKENS
       })
     });
     const raw = await upstream.text();
@@ -139,7 +145,7 @@ async function handleImage(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY), imageModel: env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL });
+    if (url.pathname === "/api/health") return json({ ok: true, worker: "vanes-ai", openrouterConfigured: Boolean(env.OPENROUTER_API_KEY), imageModel: env.VANES_IMAGE_MODEL || DEFAULT_IMAGE_MODEL, maxTokens: DEFAULT_MAX_TOKENS });
     if (url.pathname === "/api/chat") return handleChat(request, env);
     if (url.pathname === "/api/image") return handleImage(request, env);
     return env.ASSETS.fetch(request);
