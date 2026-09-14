@@ -1,69 +1,132 @@
 # VANES AI
 
-VANES AI is a browser-based study companion for learners following the Tanzanian secondary-school curriculum. It includes a personal learner profile, subject library, study planner, notes, online OpenRouter AI assistance, and image-based question analysis.
+![VANES AI](assets/vanes-logo.svg)
 
-## Run locally
+**VANES AI — Verseversatile Adaptive Neuro Emergent System** is an online, learner-friendly study companion designed around the Tanzanian secondary-school curriculum. It is built to adapt to what a student is asking, detect the likely subject and level, explain concepts, analyse work, create practice, organise study time, and work with study images.
 
-No build step or npm dependencies are required.
+![OB Technologies Lab](assets/ob-technologies-lab.svg)
 
-```bash
-py -m http.server 4173
-```
+## 🚀 Use VANES online
 
-Then open `http://localhost:4173` in a browser.
+The intended public version of VANES runs on **Vercel**, so students can open one normal web link from a phone, tablet or PC. There is **no Command Prompt command and no local server required for students**.
 
-## Configure the online AI
+### First-time setup for the owner
 
-Open `app.js` and edit these two values near the top:
+1. Open [Vercel](https://vercel.com/) and sign in with GitHub.
+2. Import **`obtechnologies625-lab/VANES-AI`**.
+3. Use **Other** as the framework preset and leave the build command empty.
+4. Click **Deploy**.
+5. In the Vercel project, open **Settings → Environment Variables**.
+6. Add this variable:
 
-```js
-const OPENROUTER_API_KEY = "YOUR_OPENROUTER_API_KEY_HERE";
-const OPENROUTER_MODEL = "openai/gpt-4o-mini";
-```
+   `OPENROUTER_API_KEY`
 
-Replace the placeholder with your OpenRouter API key and keep the model as-is unless you want to use another OpenRouter-supported model. An internet connection is required for online AI responses.
+7. Paste your real OpenRouter API key into the **Value** field. Do **not** put the real key into `app.js`, README files, screenshots, or GitHub.
+8. Enable it for **Production** (and Preview/Development if you want those environments to use AI too).
+9. Redeploy the latest deployment.
+10. Vercel gives the project a permanent public URL such as `https://your-project-name.vercel.app`. That is the link students can use on mobile and PC.
 
-> **Security:** This version calls OpenRouter directly from the browser because it is designed for easy local testing. A browser-exposed API key can be copied by users. For a public/production deployment, move the OpenRouter request to a server-side endpoint and store the key as a server secret.
+> **Important:** The `/api/chat` server endpoint is included so the OpenRouter secret can stay on the server. GitHub Pages can host the static interface, but it cannot execute the server endpoint. For the complete online AI version, use the Vercel deployment as the main public app.
 
-## How to use the AI
+### Where is the OpenRouter API key?
 
-1. Open **AI study coach**.
-2. Type a normal question, in English or Kiswahili.
-3. Use tags to control the kind of help you want:
-   - `#explain` — teach a concept clearly from first principles.
-   - `#practice` — create practice questions and marking guidance.
-   - `#analyze` — deeply inspect an answer, identify mistakes, and explain corrections.
-   - `#plan` — create a realistic study plan.
-   - `#summarize` — make structured revision notes.
-   - `#translate` — translate while preserving meaning.
-   - `#mark` — assess an answer using a transparent rubric.
+**Put it in Vercel, not in the browser code:**
 
-### Examples
+**Vercel → your VANES project → Settings → Environment Variables → Add New**
 
-```text
-#explain Form 4 Chemistry: acids and bases
-#practice Form 2 Geography: weather and climate
-#analyze I got 3/5 for this question. Explain my mistakes.
-#plan I have 14 days to prepare for my Physics exam.
-#summarize the causes of the Maji Maji Rebellion
-#translate Explain this paragraph in Kiswahili
-#mark Here is my History answer: ...
-```
+- Name: `OPENROUTER_API_KEY`
+- Value: your OpenRouter secret key
+- Environment: Production (also Preview/Development if desired)
 
-## Image analysis
+The repository already contains the secure endpoint at **`/api/chat.js`**. You should never send the secret key to ChatGPT or commit it to GitHub.
 
-Use the **image button** beside the chat box to upload a photo of a textbook page, handwritten answer, diagram, or exam question. Add an instruction such as:
+## 📱 How students use VANES
 
-```text
-#analyze Solve this question step by step and explain where my method went wrong.
-```
+![VANES AI getting started guide](docs/how-to-use.svg)
 
-The image is sent to the configured OpenRouter vision-capable model for analysis.
+1. **Enter your name.** The first screen asks for the learner's name and creates a local learner profile on that device.
+2. **Choose a subject or ask directly.** VANES includes O-Level/CSEE and A-Level/ACSEE subject areas and can detect the likely subject from a question.
+3. **Ask VANES.** Questions can be written in English or Kiswahili.
+4. **Choose an AI mode when useful:** `#explain`, `#practice`, `#analyze`, `#plan`, `#summarize`, `#translate`, or `#mark`.
+5. **Upload a study image.** Use a photo of a question, handwritten work, notes, graph, diagram or textbook page and tell VANES what to do with it.
+6. **Use the planner and notes.** Build focused sessions and keep important study notes.
+7. **Switch themes.** Use the Light/Dark mode control for comfortable studying in different environments.
 
-## Personal account
+## 🎓 Curriculum coverage
 
-The first time the app opens, it asks for the learner's name and creates a local profile. The name and progress/preferences are stored in the browser's `localStorage`. This is a local profile, not a cloud account or authentication system.
+The app contains a broad Tanzanian secondary-school subject library and topic maps for AI context, including:
 
-## Subjects
+- Kiswahili
+- English Language
+- Basic Mathematics
+- Basic Applied Mathematics
+- Advanced Mathematics
+- History
+- Geography
+- Chemistry
+- Physics
+- Biology
+- Civics
+- Information and Computer Studies
+- Commerce
+- Bookkeeping
+- Agriculture
+- Food and Nutrition
+- Fine Art
+- Music
+- French
+- Arabic
+- Bible Knowledge
+- Islamic Knowledge
+- Physical Education
+- Economics
+- General Studies
+- Computer Science
+- Accountancy
+- Business Studies
+- Computer Applications
 
-The subject library includes a broad set of common Tanzanian O-Level/CSEE and A-Level/ACSEE subjects, including Kiswahili, English Language, Basic Mathematics, Basic Applied Mathematics, Advanced Mathematics, History, Geography, Chemistry, Physics, Biology, Civics, Information and Computer Studies, Commerce, Bookkeeping, Agriculture, Food and Nutrition, Fine Art, Music, French, Arabic, Bible Knowledge, Islamic Knowledge, Physical Education, Economics, General Studies, Computer Science, and Accountancy. Schools may offer different subject combinations.
+Some subjects can exist at different levels, and schools may offer different combinations. VANES should be treated as a study assistant and its answers should be checked against the learner's current teacher, textbook and official syllabus where accuracy is critical.
+
+## 🧠 What makes VANES different?
+
+The name **VANES** represents **Verseversatile Adaptive Neuro Emergent System**. The product direction is for the system to adapt its help to the learner rather than behaving like a simple question-and-answer page.
+
+The long-term VANES experience can combine:
+
+- Subject and level detection
+- Tanzanian curriculum context
+- Multi-turn AI study chat
+- Step-by-step explanations
+- Practice questions and marking guidance
+- Mistake analysis and correction
+- Study planning
+- Revision summaries
+- Image/question analysis
+- Educational image generation where the selected model supports it
+- Personal learner profile
+- Notes and progress tracking
+- Light and dark themes
+- Mobile-friendly responsive interface
+
+## 🛠️ Development
+
+Students do **not** need to run commands to use the public app.
+
+For the owner/developer, the project is a lightweight web app with no required npm build step. Development can still be done locally when needed, but the normal student experience is the deployed Vercel URL.
+
+## 🔐 Security
+
+The public production deployment should use the server-side OpenRouter endpoint in `api/chat.js` with the Vercel environment variable `OPENROUTER_API_KEY`.
+
+Never commit a real API key. If a key has ever been exposed in browser code or a public repository, rotate/revoke it in OpenRouter and replace it with a new secret stored in Vercel.
+
+## 🌐 24-hour availability
+
+Vercel provides the public hosting needed for an always-accessible web URL. The app does not need a PC with Command Prompt running in order for students to open the site. AI requests are handled by the deployed server endpoint and OpenRouter when the user is online.
+
+The app can also be added to a compatible phone's home screen as a web app because VANES includes a web manifest and app-shell service worker.
+
+## 👨‍💻 Made by OB Technologies Lab
+
+VANES AI is a project by **OB Technologies Lab**.
