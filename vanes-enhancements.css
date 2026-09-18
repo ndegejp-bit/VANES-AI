@@ -70,3 +70,21 @@
   #coach #chatForm>button{flex-basis:42px;width:42px;height:42px}
 }
 
+
+/* Updated VANES usage guide — replaces the old prompt/tag layout. */
+#coach .vanes-howto{display:flex;flex-direction:column;text-align:left;padding:28px;background:linear-gradient(145deg,#07172a,#0a1322);border:1px solid #1a5a83;border-radius:16px;min-height:620px;box-sizing:border-box}
+#coach .howto-header{display:flex;align-items:flex-start;gap:15px;padding-bottom:22px;border-bottom:1px solid #174a70}
+#coach .howto-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:1px solid #00dfff;border-radius:12px;background:#082640;color:#5eefff;font-size:22px;box-shadow:0 0 22px rgba(0,223,255,.16)}
+#coach .howto-header .eyebrow{margin:0 0 6px;color:#62eaff}
+#coach .howto-header h2{margin:0 0 6px;color:#f5fbff;font-size:24px}
+#coach .howto-header p:last-child{margin:0;color:#9db5c7;font-size:12px;line-height:1.55}
+#coach .howto-list{display:grid;gap:0;margin-top:4px}
+#coach .howto-list article{display:grid;grid-template-columns:36px 1fr;gap:13px;padding:17px 0;border-bottom:1px solid rgba(23,74,112,.65)}
+#coach .howto-list article>span{display:grid;place-items:center;width:30px;height:30px;border:1px solid #276789;border-radius:8px;background:#0b2237;color:#63eaff;font:800 9px "Space Grotesk",sans-serif}
+#coach .howto-list strong{display:block;margin:0 0 5px;color:#f4fbff;font-size:13px}
+#coach .howto-list p{margin:0;color:#9fb4c5;font-size:11px;line-height:1.65}
+#coach .howto-tip{margin-top:auto;padding:13px 14px;border:1px solid #225978;border-radius:10px;background:#091d2e}
+#coach .howto-tip strong{display:block;margin-bottom:4px;color:#65eaff;font-size:10px;text-transform:uppercase;letter-spacing:.7px}
+#coach .howto-tip p{margin:0;color:#a9bdcb;font-size:10px;line-height:1.55}
+@media(max-width:900px){#coach .vanes-howto{min-height:0;padding:22px}.howto-list article{padding:15px 0}}
+@media(max-width:650px){#coach .vanes-howto{padding:18px;border-radius:13px}#coach .howto-header h2{font-size:21px}#coach .howto-list article{grid-template-columns:32px 1fr;gap:10px}#coach .howto-list article>span{width:28px;height:28px}.howto-list p{font-size:10.5px}}
