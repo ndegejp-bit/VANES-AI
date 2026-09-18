@@ -26,3 +26,6 @@
 #coach #generateButton,#coach #chatForm button[type=submit]{background:linear-gradient(135deg,#5b5cf6,#8b5cf6)!important;border-color:#8b8cff!important}
 #coach .vanes-history-item{border-radius:9px}
 @media(max-width:650px){#coach .messages{padding:20px 13px}#coach .vanes-content{font-size:14px}#coach .user-message .vanes-bubble{max-width:calc(100% - 20px)}}
+
+
+.vanes-image-status .vanes-content{background:transparent!important;padding:2px 0!important}.vanes-image-status small,.image-message small{color:#91a4b8}.vanes-generated-images{display:grid;gap:12px;margin-top:12px}.vanes-generated-images img{display:block;width:min(100%,620px);max-height:620px;object-fit:contain;border-radius:14px;border:1px solid #26384c;box-shadow:0 12px 35px rgba(0,0,0,.25)}@media(max-width:650px){.vanes-generated-images img{max-height:55vh;border-radius:10px}}
