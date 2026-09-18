@@ -24,52 +24,62 @@ async function handleChat(request,env){
   const headers=cors(request.headers.get("Origin"));
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers});
   if(request.method!=="POST")return json({error:"Method not allowed"},405,headers);
-  if(!env.OPENROUTER_API_KEY)return json({error:"The VANES AI server is not configured yet. Add the runtime secret OPENROUTER_API_KEY in Cloudflare."},500,headers);
-  const length=Number(request.headers.get("Content-Length")||0);
-  if(length>MAX_BODY)return json({error:"Request is too large."},413,headers);
+  if(!env.OPENROUTER_API_KEY)return json({error:"VANES AI server is missing OPENROUTER_API_KEY."},500,headers);
   let body;
   try{body=await request.json()}catch{return json({error:"Invalid JSON body."},400,headers)}
-  if(!Array.isArray(body?.messages)||!body.messages.length)return json({error:"messages must be a non-empty array."},400,headers);
-  const messages=body.messages.slice(-24);
-  const hasImageInput=messages.some(m=>Array.isArray(m?.content)&&m.content.some(part=>part?.type==="image_url"||part?.type==="input_image"));
+  if(!Array.isArray(body?.messages)||!body.messages.length)return json({error:"Please send a question."},400,headers);
+
+  const messages=body.messages.slice(-18);
+  const hasImage=messages.some(m=>Array.isArray(m?.content)&&m.content.some(p=>p?.type==="image_url"||p?.type==="input_image"));
+  const models=hasImage
+    ? ["google/gemma-3-27b-it:free","openrouter/free"]
+    : ["qwen/qwen3-32b:free","meta-llama/llama-3.3-70b-instruct:free","google/gemma-3-27b-it:free","openrouter/free"];
   const requested=typeof body.model==="string"?body.model.trim():"";
-  const freeModels=["openrouter/free","qwen/qwen3-32b:free","meta-llama/llama-3.3-70b-instruct:free","google/gemma-3-27b-it:free"];
-  const orderedModels=hasImageInput?["google/gemma-3-27b-it:free","openrouter/free"]:freeModels;
-  const models=requested&&orderedModels.includes(requested)?[requested,...orderedModels.filter(m=>m!==requested)]:orderedModels;
+  const ordered=requested&&models.includes(requested)?[requested,...models.filter(m=>m!==requested)]:models;
   const requestedTokens=Number(body.max_tokens);
-  const maxTokens=Number.isFinite(requestedTokens)?Math.min(Math.max(requestedTokens,128),DEFAULT_MAX_TOKENS):DEFAULT_MAX_TOKENS;
-  const tokenAttempts=[maxTokens,...[512,384,256,160].filter(v=>v<maxTokens)];
-  try{
-    let lastStatus=503,lastDetail="OpenRouter request failed.";
-    for(const model of models){
-      for(const candidate of tokenAttempts){
-        const upstream=await fetch(OPENROUTER_URL,{method:"POST",headers:{Authorization:`Bearer ${env.OPENROUTER_API_KEY}`,"Content-Type":"application/json","HTTP-Referer":env.APP_URL||new URL(request.url).origin,"X-Title":"VANES AI"},body:JSON.stringify({model,messages,stream:false,temperature:.4,max_tokens:candidate})});
-        if(upstream.ok){
-          const raw=await upstream.text();
-          let data;try{data=JSON.parse(raw)}catch{data={error:raw||"Invalid AI response."}};
-          if(data?.error)return json({error:readableError(data.error,"AI provider returned an error.")},502,headers);
-          const content=extractText(data).trim();
-          if(!content){
-            lastStatus=502;
-            lastDetail="The selected AI model returned no answer content.";
-            continue;
-          }
-          return json({choices:[{message:{role:"assistant",content}}],model},200,{...headers,"X-VANES-Model":model,"X-VANES-Max-Tokens":String(candidate)});
-        }
-        lastStatus=upstream.status;
-        lastDetail=(await upstream.text()).slice(0,1000)||`OpenRouter returned HTTP ${upstream.status}`;
-        if(lastStatus===400||lastStatus===404||lastStatus===422){
-          if(hasEndpointError(lastDetail)||hasImageInput)continue;
-          break;
-        }
-        if([402,408,409,429,500,502,503,504].includes(lastStatus))continue;
-        break;
+  const maxTokens=Number.isFinite(requestedTokens)?Math.min(Math.max(requestedTokens,128),700):600;
+  let lastStatus=503,lastDetail="No model returned an answer.";
+
+  for(const model of ordered){
+    try{
+      const upstream=await fetch(OPENROUTER_URL,{
+        method:"POST",
+        headers:{
+          Authorization:"Bearer "+env.OPENROUTER_API_KEY,
+          "Content-Type":"application/json",
+          "HTTP-Referer":env.APP_URL||new URL(request.url).origin,
+          "X-Title":"VANES AI"
+        },
+        body:JSON.stringify({
+          model,
+          messages,
+          stream:false,
+          temperature:.3,
+          max_tokens:maxTokens
+        })
+      });
+      const raw=await upstream.text();
+      let data=null;try{data=raw?JSON.parse(raw):null}catch(_){}
+      if(upstream.ok){
+        const content=extractText(data).trim();
+        if(content)return json({choices:[{message:{role:"assistant",content}}],model},200,{...headers,"X-VANES-Model":model});
+        lastStatus=502;lastDetail="Model "+model+" returned HTTP 200 but no answer text.";
+        continue;
       }
-      if(![402,408,409,429,500,502,503,504].includes(lastStatus))break;
+      lastStatus=upstream.status;
+      lastDetail=readableError(data?.error||data,raw||("OpenRouter returned HTTP "+upstream.status));
+      continue;
+    }catch(error){
+      lastStatus=502;lastDetail=error?.message||"Network error contacting OpenRouter.";continue;
     }
-    if(lastStatus===402)return json({error:"VANES could not get a free OpenRouter model right now. Please try again shortly.",code:402,provider:"OpenRouter"},402,headers);
-    return json({error:"VANES could not get a response from the available AI models.",detail:lastDetail},lastStatus,headers);
-  }catch{return json({error:"Unable to reach the AI service."},502,headers)}
+  }
+
+  return json({
+    error:"VANES could not produce an answer.",
+    detail:lastDetail,
+    code:lastStatus,
+    provider:"OpenRouter"
+  },lastStatus>=400&&lastStatus<600?lastStatus:502,headers);
 }
 async function handleImage(request,env){const headers=cors(request.headers.get("Origin"));if(request.method==="OPTIONS")return new Response(null,{status:204,headers});if(request.method!=="POST")return json({error:"Method not allowed"},405,headers);if(!env.OPENROUTER_API_KEY)return json({error:"The VANES image service is not configured. Add OPENROUTER_API_KEY in Cloudflare."},500,headers);let body;try{body=await request.json()}catch{return json({error:"Invalid JSON body."},400,headers)}const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";if(!prompt)return json({error:"Please describe the image you want."},400,headers);const model=typeof env.VANES_IMAGE_MODEL==="string"&&env.VANES_IMAGE_MODEL.trim()?env.VANES_IMAGE_MODEL.trim():"google/gemini-2.5-flash-image";const enhancedPrompt=enhanceImagePrompt(prompt);try{const upstream=await fetch(OPENROUTER_URL,{method:"POST",headers:{Authorization:`Bearer ${env.OPENROUTER_API_KEY}`,"Content-Type":"application/json","HTTP-Referer":env.APP_URL||new URL(request.url).origin,"X-Title":"VANES AI Image Generator"},body:JSON.stringify({model,messages:[{role:"user",content:enhancedPrompt}],modalities:["text","image"],max_tokens:IMAGE_MAX_TOKENS})});const raw=await upstream.text();let data=null;try{data=JSON.parse(raw)}catch{}if(!upstream.ok){return json({error:readableError(data?.error||data,raw||`Image generation failed (${upstream.status}).`),provider:"OpenRouter",model},upstream.status,headers)}const images=extractImageUrls(data);const text=extractText(data);if(!images.length)return json({error:"The image model completed but returned no renderable image.",provider:"OpenRouter",model,details:text||null},502,headers);return json({ok:true,provider:"OpenRouter",model,images,text},200,headers)}catch(error){return json({error:readableError(error,"Unable to reach the image generation service."),provider:"OpenRouter",model},502,headers)}}
 async function handleRunway(request,env){const headers=cors(request.headers.get("Origin"));if(request.method==="OPTIONS")return new Response(null,{status:204,headers});if(!env.RUNWAY_API_KEY)return json({error:"Runway is not connected to VANES yet. Configure the private Cloudflare secret RUNWAY_API_KEY."},503,headers);const url=new URL(request.url);const taskId=url.searchParams.get("task");const baseHeaders={Authorization:`Bearer ${env.RUNWAY_API_KEY}`,"Content-Type":"application/json","X-Runway-Version":env.RUNWAY_API_VERSION||"2024-11-06"};try{if(request.method==="GET"&&taskId){const r=await fetch(`${RUNWAY_URL}/tasks/${encodeURIComponent(taskId)}`,{headers:baseHeaders});const raw=await r.text();let data;try{data=JSON.parse(raw)}catch{data={error:raw}}return json(data,r.status,headers)}if(request.method!=="POST")return json({error:"Method not allowed"},405,headers);const length=Number(request.headers.get("Content-Length")||0);if(length>MAX_BODY)return json({error:"Video request is too large."},413,headers);let body;try{body=await request.json()}catch{return json({error:"Invalid JSON body."},400,headers)}const prompt=typeof body?.prompt==="string"?body.prompt.trim():"";if(!prompt)return json({error:"Please describe the learning visual or study animation you want."},400,headers);const educationalPrefix="VANES AI educational visual generation. Create a learning-focused visual for a Tanzanian secondary-school learner. Preserve the user’s study intent, factual meaning and age-appropriate presentation. Do not introduce unrelated entertainment, promotional content or unsupported academic claims. User request: ";const model=typeof body.model==="string"&&body.model.trim()?body.model.trim():(env.RUNWAY_MODEL||DEFAULT_RUNWAY_MODEL);const duration=[5,10].includes(Number(body.duration))?Number(body.duration):5;const ratio=["1280:720","720:1280","1104:832","832:1104","960:960"].includes(body.ratio)?body.ratio:"1280:720";const payload={model,promptText:educationalPrefix+prompt,duration,ratio};if(typeof body.image==="string"&&body.image.trim())payload.promptImage=body.image.trim();const r=await fetch(`${RUNWAY_URL}/image_to_video`,{method:"POST",headers:baseHeaders,body:JSON.stringify(payload)});const raw=await r.text();let data;try{data=JSON.parse(raw)}catch{data={error:raw}}if(!r.ok)return json({error:readableError(data?.error||data,raw||"Runway request failed.")},r.status,headers);return json({ok:true,taskId:data.id||data.task_id||data.taskId,provider:"Runway",status:data.status||"PENDING"},200,headers)}catch(error){return json({error:readableError(error,"Unable to reach Runway.")},502,headers)}}
