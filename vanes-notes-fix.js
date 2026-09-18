@@ -90,14 +90,14 @@ function activeSession(){return read(ACTIVE_SESSION,null)}
 function startSessionTimer(shelfId){
  const items=read(SHELF,[]);
  const existing=items.find(x=>x.id===shelfId);
- const state={shelfId:shelfId||null,startedAt:Date.now(),accumulatedSeconds:Number(existing?.elapsedSeconds)||0};
+ const state={shelfId:shelfId||null,startedAt:Date.now(),baseSeconds:Number(existing?.elapsedSeconds)||0};
  write(ACTIVE_SESSION,state);
  const w=document.querySelector('#workspace');if(w)w.dataset.sessionStarted=String(state.startedAt);
  updateClock();
 }
 function elapsedSession(){
  const s=activeSession();if(!s)return 0;
- return Math.max(0,(Number(s.accumulatedSeconds)||0)+Math.floor((Date.now()-Number(s.startedAt||Date.now()))/1000));
+ return Math.max(0,Math.floor((Date.now()-Number(s.startedAt||Date.now()))/1000));
 }
 function updateClock(){
  const el=document.querySelector('#sessionClock');if(!el)return;
@@ -118,8 +118,8 @@ function complete(){
  chips.forEach(x=>{if(!e.done.includes(x))e.done.push(x)});
  if(!chips.length&&all[0]&&!e.done.includes(all[0]))e.done.push(all[0]);
  e.sessions=(e.sessions||0)+1;
- const seconds=elapsedSession(),minutes=Math.max(1,Math.round(seconds/60));
- t.subjects[s.key]=e;t.minutes+=(seconds>0?minutes:0);
+ const seconds=elapsedSession(),minutes=Math.floor(seconds/60);
+ t.subjects[s.key]=e;t.minutes+=(minutes>0?minutes:0);
  const d=day(),st=read(STREAK,{count:0,last:null});
  if(st.last!==d)st.count=st.last===new Date(Date.now()-86400000).toISOString().slice(0,10)?st.count+1:1;
  st.last=d;write(STREAK,st);
