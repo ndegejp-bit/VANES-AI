@@ -385,6 +385,11 @@
       return /\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|camera movement|time-lapse|timelapse|vfx)\b/i.test(value);
     }
 
+    function imageIntent(value) {
+      return /\b(generate|create|make|draw|render|design|produce|show me)\b.*\b(image|picture|photo|illustration|diagram|drawing|portrait|poster|logo|art)\b/i.test(value) ||
+        /\b(image|picture|photo|illustration|diagram|drawing|portrait|poster|logo|art)\b.*\b(generate|create|make|draw|render|design|produce)\b/i.test(value);
+    }
+
     async function generate() {
       const prompt = input.value.trim();
 
@@ -464,6 +469,12 @@
       const image = window.VANES_PENDING_IMAGE || null;
 
       if (!text && !image) return;
+
+      if (!image && imageIntent(text)) {
+        input.value = '';
+        generate();
+        return;
+      }
 
       input.value = '';
       window.VANES_PENDING_IMAGE = null;
