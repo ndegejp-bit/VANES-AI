@@ -51,7 +51,7 @@ function planner(){
     },100);
   });
 }
-function brand(){document.querySelectorAll('.brand-mark').forEach(e=>{e.innerHTML='<img src="/assets/vanes-turbine-wheel.svg" alt="VANES AI six turbine wheel" style="width:34px;height:34px">'});const b=document.querySelector('.brand-badge');if(b)b.innerHTML='<img src="/assets/ob-tech-labs-brain.svg" class="vanes-ob-logo" alt="OB Tech-Labs cyberpunk brain halo">';const h=document.querySelector('.orbit-illustration');if(h&&!h.querySelector('.vanes-dashboard-logo'))h.innerHTML='<img class="vanes-dashboard-logo" src="/assets/vanes-turbine-wheel.svg" alt="VANES AI six turbine wheel">'}
+function brand(){document.querySelectorAll('.brand-mark').forEach(e=>{e.innerHTML='<img src="assets/vanes-turbine-wheel.svg" alt="VANES AI six turbine wheel" style="width:34px;height:34px">'});const b=document.querySelector('.brand-badge');if(b)b.innerHTML='<img src="assets/ob-tech-labs-brain.svg" class="vanes-ob-logo" alt="OB Tech-Labs cyberpunk brain halo">';const h=document.querySelector('.orbit-illustration');if(h&&!h.querySelector('.vanes-dashboard-logo'))h.innerHTML='<img class="vanes-dashboard-logo" src="assets/vanes-turbine-wheel.svg" alt="VANES AI six turbine wheel">'}
 function init(){css();profile();planner();plansPanel();brand();apply();const m=document.getElementById('vanesProfileUpgrade');if(!read()?.name||!read()?.level)m.hidden=false;/* The legacy learner-profile module owns the visible #nameModal. Do not intercept
    #changeName here, otherwise two profile dialogs can open at once. */window.addEventListener('hashchange',()=>setTimeout(()=>{planner();plansPanel();brand();apply()},50))}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
