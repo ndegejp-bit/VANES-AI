@@ -1,5 +1,17 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-4o-mini";
+
+// Free-first fallback chain. Keep paid models out of the default path so a low/zero
+// OpenRouter balance does not make VANES unusable.
+const MODEL_FALLBACKS = [
+  "openrouter/free",
+  "qwen/qwen3-32b:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-3-27b-it:free"
+];
+
+function retryable(status) {
+  return [402, 408, 409, 429, 500, 502, 503, 504].includes(status);
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -19,41 +31,63 @@ export async function onRequestPost(context) {
     return Response.json({ error: "messages must be a non-empty array." }, { status: 400 });
   }
 
-  try {
-    const upstream = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": env.APP_URL || "https://obtechnologies625-lab.github.io/VANES-AI/",
-        "X-Title": "VANES AI"
-      },
-      body: JSON.stringify({
-        model: body.model || DEFAULT_MODEL,
-        messages: body.messages,
-        stream: true,
-        temperature: 0.4
-      })
-    });
+  const requested = typeof body.model === "string" ? body.model.trim() : "";
+  const models = requested && MODEL_FALLBACKS.includes(requested)
+    ? [requested, ...MODEL_FALLBACKS.filter((model) => model !== requested)]
+    : MODEL_FALLBACKS;
 
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      return new Response(detail || "OpenRouter request failed.", {
-        status: upstream.status,
-        headers: { "Content-Type": "application/json; charset=utf-8" }
+  let lastStatus = 503;
+  let lastDetail = "OpenRouter request failed.";
+
+  try {
+    for (const model of models) {
+      const upstream = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": env.APP_URL || new URL(request.url).origin,
+          "X-Title": "VANES AI"
+        },
+        body: JSON.stringify({
+          model,
+          messages: body.messages.slice(-24),
+          stream: true,
+          temperature: 0.4,
+          max_tokens: Math.min(Math.max(Number(body.max_tokens) || 600, 128), 700)
+        })
       });
+
+      if (upstream.ok) {
+        return new Response(upstream.body, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-VANES-Model": model
+          }
+        });
+      }
+
+      lastStatus = upstream.status;
+      lastDetail = (await upstream.text()).slice(0, 1000) || `OpenRouter returned HTTP ${upstream.status}`;
+      if (!retryable(upstream.status)) break;
     }
 
-    return new Response(upstream.body, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        "Connection": "keep-alive"
-      }
-    });
+    if (lastStatus === 402) {
+      return Response.json({
+        error: "VANES could not get a free OpenRouter model right now. Please try again shortly.",
+        code: 402
+      }, { status: 402 });
+    }
+
+    return Response.json({
+      error: "VANES could not get a response from the available AI models.",
+      detail: lastDetail
+    }, { status: lastStatus });
   } catch (error) {
     console.error("VANES chat error", error);
-    return Response.json({ error: "Unable to reach the AI service." }, { status: 500 });
+    return Response.json({ error: "Unable to reach the AI service." }, { status: 502 });
   }
 }
