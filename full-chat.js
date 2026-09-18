@@ -16,6 +16,7 @@
     const ACTIVE = 'vanes-chat-active-v1';
     const CHAT_API = window.VANES_CHAT_ENDPOINT || 'https://vanes-ai.obtechnologies625.workers.dev/api/chat';
     const CHAT_FALLBACKS = [...new Set([CHAT_API, 'https://vanes-ai.obtechnologies625.workers.dev/api/chat', '/api/chat'].filter(Boolean))];
+    const CHAT_TIMEOUT_MS = 60000;
 
     async function requestChat(payload, signal) {
       let lastError = null;
