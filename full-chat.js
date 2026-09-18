@@ -63,7 +63,9 @@
       if (m.role === "system") return;
       const el = document.createElement("div"); el.className = `message ${m.role === "user" ? "user-message" : "coach-message"}`;
       if (m.role === "assistant") {
-        el.innerHTML = `<span>✦</span><div class="vanes-bubble"><div class="vanes-content">${markdown(m.content)}</div><div class="vanes-actions"><button type="button" data-copy="${i}">Copy</button><button type="button" data-regenerate="${i}">Regenerate</button></div></div>`;
+        const imageMatch=String(m.content||"").match(/^<VANES_IMAGE>([\\s\\S]+)<\\/VANES_IMAGE>$/);
+        const rendered=imageMatch ? `<div>✦ Image created by VANES AI</div><img src="${escape(imageMatch[1])}" alt="AI-generated educational visual" style="display:block;max-width:100%;max-height:520px;margin-top:10px;border-radius:12px">` : markdown(m.content);
+        el.innerHTML = `<span>✦</span><div class="vanes-bubble"><div class="vanes-content">${rendered}</div><div class="vanes-actions"><button type="button" data-copy="${i}">Copy</button><button type="button" data-regenerate="${i}">Regenerate</button></div></div>`;
       } else {
         el.innerHTML = `<div class="vanes-bubble"><div class="vanes-content">${markdown(m.content)}</div><div class="vanes-actions"><button type="button" data-edit="${i}">Edit</button></div></div>`;
       }
@@ -170,7 +172,7 @@ You are an expert study assistant for learners following the Tanzanian secondary
   const upload=document.querySelector("#uploadButton");
   if(upload){let fileInput=document.querySelector("#imageInput");if(!fileInput){fileInput=document.createElement("input");fileInput.type="file";fileInput.id="imageInput";fileInput.accept="image/*";fileInput.hidden=true;document.body.append(fileInput);}upload.onclick=e=>{e.preventDefault();fileInput.click();};fileInput.onchange=()=>{const f=fileInput.files?.[0];if(!f)return;if(f.size>8*1024*1024){toast("Choose an image smaller than 8 MB.");return;}const r=new FileReader();r.onload=()=>{window.VANES_PENDING_IMAGE=r.result;const p=document.querySelector("#imagePreview");if(p){p.hidden=false;p.innerHTML=`<img src="${escape(r.result)}" alt="Study image preview" style="max-width:100%;max-height:150px;border-radius:8px"><span>Image attached — send a question or instruction.</span>`;}};r.readAsDataURL(f);};}
 
-  function wantsVideo(prompt){return /\\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|transition|camera movement|time-lapse|timelapse|visual effect|vfx)\\b/i.test(prompt)}
+  function wantsVideo(prompt){return /\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|transition|camera movement|time-lapse|timelapse|visual effect|vfx)\b/i.test(prompt)}
 
   async function generateImage(){
     const prompt=input.value.trim();
