@@ -59,4 +59,17 @@ function bootRunway(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootRunway,{once:true});else bootRunway();
 window.VANES_RUNWAY_ENDPOINT=window.VANES_RUNWAY_ENDPOINT||'/api/video';
+window.VANES_OPEN_RUNWAY=function(prompt){
+  let tries=0;
+  const open=()=>{
+    tries++;
+    const modal=document.querySelector('#vanes-runway-modal');
+    const button=document.querySelector('#vanes-runway-open');
+    if(modal){ if(prompt){const input=modal.querySelector('#vanes-runway-prompt');if(input)input.value=prompt;} modal.classList.add('open'); window.VANES_RUNWAY_READY=true; return; }
+    mount();
+    if(tries<40)setTimeout(open,250);
+    else { window.VANES_RUNWAY_READY=false; window.showToast?.('Creative Studio could not initialize. Please refresh VANES once.'); }
+  };
+  open();
+};
 })();
