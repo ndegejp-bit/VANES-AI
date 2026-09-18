@@ -16,6 +16,7 @@
     const ACTIVE = 'vanes-chat-active-v1';
     const CHAT_API = window.VANES_CHAT_ENDPOINT || '/api/chat';
     const IMAGE_API = window.VANES_IMAGE_ENDPOINT || '/api/image';
+    const RUNWAY_API = window.VANES_RUNWAY_ENDPOINT || '/api/video';
 
     let chats = read(KEY, []);
     let active = localStorage.getItem(ACTIVE) || '';
@@ -158,6 +159,13 @@
         '" alt="AI-generated educational visual">';
     }
 
+    function videoMarkup(content) {
+      const match = String(content || '').match(/^<VANES_VIDEO>([\\s\\S]+)<\\/VANES_VIDEO>$/);
+      if (!match) return null;
+      return '<div class="vanes-image-label">✦ Video created by Runway</div>' +
+        '<video class="vanes-generated-video" controls playsinline preload="metadata" src="' + esc(match[1]) + '"></video>';
+    }
+
     function render() {
       ensure();
       renderTools();
@@ -186,11 +194,12 @@
 
         if (message.role === 'assistant') {
           const image = imageMarkup(message.content);
+          const video = videoMarkup(message.content);
 
           element.innerHTML =
             '<span>✦</span>' +
             '<div class="vanes-bubble">' +
-            '<div class="vanes-content">' + (image || md(message.content)) + '</div>' +
+            '<div class="vanes-content">' + (image || video || md(message.content)) + '</div>' +
             '<div class="vanes-actions">' +
             '<button type="button" data-copy="' + index + '">Copy</button>' +
             '<button type="button" data-regenerate="' + index + '">Regenerate</button>' +
@@ -400,16 +409,22 @@
       }
 
       if (videoIntent(prompt)) {
-        const button = document.querySelector('#vanes-runway-open');
-
-        if (button) {
+        input.value = '';
+        ensure();
+        const chat = current();
+        chat.messages.push({role:'user',content:'Create this video with Runway: ' + prompt});
+        if (chat.title === 'New chat') chat.title = prompt.slice(0,48);
+        save(); render(); setStatus('Opening Creative Studio…');
+        const openStudio = function(){
+          const button=document.querySelector('#vanes-runway-open');
+          if(!button){ setStatus('Creative Studio unavailable'); toast('Creative Studio could not load.'); return; }
           button.click();
-          const runwayInput = document.querySelector('#vanes-runway-prompt');
-          if (runwayInput) runwayInput.value = prompt;
-          toast('Video request opened in VANES Creative Studio.');
-        } else {
-          toast('Creative Studio is still loading.');
-        }
+          const runwayInput=document.querySelector('#vanes-runway-prompt');
+          if(runwayInput) runwayInput.value=prompt;
+          setStatus('Runway ready — create your video.');
+        };
+        if(document.querySelector('#vanes-runway-open')) openStudio();
+        else { let n=0; const wait=setInterval(function(){ n++; if(document.querySelector('#vanes-runway-open')){clearInterval(wait);openStudio();} else if(n>=20){clearInterval(wait);openStudio();}},250); }
         return;
       }
 
@@ -576,6 +591,16 @@
     });
 
     observer.observe(stop, { attributes: true });
+
+    window.addEventListener('vanes:runway-result', function(event){
+      const url=event.detail?.url;
+      if(!url) return;
+      ensure();
+      const chat=current();
+      chat.messages.push({role:'assistant',content:'<VANES_VIDEO>'+url+'</VANES_VIDEO>'});
+      save(); render(); setStatus('Ready'); toast('Runway video added to the chat.');
+      window.VANES_PENDING_IMAGE=null;
+    });
 
     ensure();
     render();
