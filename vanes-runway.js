@@ -13,10 +13,14 @@ function addStyles(){const s=document.createElement('style');s.textContent=`
 function mount(){
  addStyles();
  window.VANES_RUNWAY_READY=false;
- const panel=document.querySelector('#coach .chat-panel'); if(!panel)return;
- const tools=panel.querySelector('.vanes-chat-tools'); if(!tools)return;
+ const panel=document.querySelector('#coach .chat-panel');
+ const tools=panel?.querySelector('.vanes-chat-tools');
  let b=document.querySelector('#vanes-runway-open');
- if(!b){b=document.createElement('button');b.id='vanes-runway-open';b.className='vanes-runway-btn';b.type='button';b.textContent='✦ Runway Create';tools.insertBefore(b,tools.querySelector('#vanes-status'));}
+ if(!b){
+   b=document.createElement('button');b.id='vanes-runway-open';b.className='vanes-runway-btn';b.type='button';b.textContent='✦ Runway Create';
+   if(tools) tools.insertBefore(b,tools.querySelector('#vanes-status'));
+   else { b.style.cssText+=';position:fixed;right:18px;bottom:18px;z-index:90;'; document.body.appendChild(b); }
+ }
  if(document.querySelector('#vanes-runway-modal')){window.VANES_RUNWAY_READY=true;return;}
  const modal=document.createElement('div');modal.className='vanes-runway-modal';modal.id='vanes-runway-modal';
  modal.innerHTML=`<div class="vanes-runway-card"><div class="vanes-runway-head"><h2>✦ VANES Creative Studio</h2><button type="button" class="vanes-runway-close">Close</button></div><p class="vanes-runway-note">Turn lessons, study diagrams and learner ideas into educational motion visuals inside VANES. Runway is used only as a creative layer for learning, explanation and study materials.</p><div class="vanes-runway-tabs"><button type="button" data-mode="text" class="active">Lesson → Video</button><button type="button" data-mode="image">Image → Video</button><button type="button" data-mode="effect">Study Effect</button></div><label>Describe what you want<textarea id="vanes-runway-prompt" rows="5" placeholder="Example: Visualise a Chemistry lesson about particle motion: show particles moving clearly between states of matter, labelled only if requested, with clean educational animation."></textarea></label><div class="vanes-runway-row"><label>Duration<select id="vanes-runway-duration"><option value="5">5 seconds</option><option value="10">10 seconds</option></select></label><label>Format<select id="vanes-runway-ratio"><option value="1280:720">Landscape 16:9</option><option value="720:1280">Portrait 9:16</option><option value="960:960">Square</option><option value="1104:832">Landscape 4:3</option><option value="832:1104">Portrait 3:4</option></select></label></div><button type="button" class="vanes-runway-start" id="vanes-runway-start">Create with Runway ✦</button><div class="vanes-runway-status" id="vanes-runway-status">Ready.</div></div>`;
