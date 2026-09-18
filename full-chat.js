@@ -358,6 +358,8 @@
 
       busy = true;
       aborter = new AbortController();
+      const requestAborter = aborter;
+      const timeoutId = setTimeout(function(){ if(requestAborter) requestAborter.abort(); }, CHAT_TIMEOUT_MS);
       setStatus('VANES is thinking…');
 
       const requestMessages = [
@@ -374,6 +376,12 @@
         ];
       }
 
+      const assistant = { role: 'assistant', content: '' };
+      chat.messages.push(assistant);
+      render();
+      const placeholder = messages.lastElementChild?.querySelector('.vanes-content');
+      if (placeholder) placeholder.innerHTML = '<span class="vanes-typing">VANES is preparing your answer…</span>';
+
       try {
         const response = await requestChat({
           model: window.VANES_CHAT_MODEL || 'openrouter/free',
@@ -381,10 +389,6 @@
           max_tokens: 600
         }, aborter.signal);
 
-
-        const assistant = { role: 'assistant', content: '' };
-        chat.messages.push(assistant);
-        render();
 
         await readChatResponse(response, function (piece) {
           assistant.content += piece;
@@ -402,10 +406,7 @@
         setStatus('Ready');
       } catch (error) {
         if (error.name !== 'AbortError') {
-          chat.messages.push({
-            role: 'assistant',
-            content: 'VANES could not connect to the AI service. ' + (error.message || 'Please check your connection and try again.')
-          });
+          assistant.content = 'VANES could not connect to the AI service. ' + (error.message || 'Please check your connection and try again.');
           save();
           render();
           setStatus('Connection error');
@@ -415,6 +416,7 @@
           setStatus('Stopped');
         }
       } finally {
+        clearTimeout(timeoutId);
         busy = false;
         aborter = null;
       }
