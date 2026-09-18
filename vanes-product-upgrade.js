@@ -1,6 +1,6 @@
 /* VANES AI product upgrade: saved plans, full-height coach, learner profile, avatars and cyberpunk branding. */
 (function(){'use strict';
-const PROFILE='vanes-learner-profile-v2',PLANS='vanes-saved-study-plans-v1',AVATAR='vanes-profile-picture-v1',DEFAULT='assets/vanes-turbine-wheel.svg';
+const PROFILE='vanes-learner-profile-v2',PLANS='vanes-saved-study-plans-v1',SHELF='vanes-study-shelf-v2',AVATAR='vanes-profile-picture-v1',DEFAULT='assets/vanes-turbine-wheel.svg';
 const O=['Kiswahili','English Language','Basic Mathematics','Basic Applied Mathematics','History','Geography','Chemistry','Physics','Biology','Civics','Information and Computer Studies','Commerce','Bookkeeping','Agriculture','Food and Nutrition','Fine Art','Music','French','Arabic','Bible Knowledge','Islamic Knowledge','Physical Education','Economics','Business Studies','Computer Applications'];
 const C={PCM:['Physics','Chemistry','Advanced Mathematics'],PCB:['Physics','Chemistry','Biology'],PGM:['Physics','Geography','Advanced Mathematics'],CBG:['Chemistry','Biology','Geography'],CBA:['Chemistry','Biology','Advanced Mathematics'],CBN:['Chemistry','Biology','Nutrition'],EGM:['Economics','Geography','Advanced Mathematics'],ECA:['Economics','Commerce','Advanced Mathematics'],HGE:['History','Geography','Economics'],HGL:['History','Geography','Kiswahili'],HKL:['History','Kiswahili','English Language'],HKA:['History','Kiswahili','Arabic'],HEC:['History','Economics','Commerce'],HGLi:['History','Geography','English Language']};
 const COMMON=['Historia ya Tanzania','Academic Communication'];
@@ -46,9 +46,9 @@ function planner(){
         const plan={id:crypto.randomUUID?.()||('plan-'+Date.now()),subject,goal,time,createdAt:new Date().toISOString()};
         putPlans([plan,...plans.filter(p=>p.id!==plan.id)].slice(0,50));
         try{
-          const shelf=JSON.parse(localStorage.getItem('vanes-study-shelf-v1')||'[]');
+          const shelf=JSON.parse(localStorage.getItem(SHELF)||'[]');
           const shelfItem={...plan,status:'Saved',updatedAt:Date.now(),totalSeconds:0,completedSessions:0};
-          localStorage.setItem('vanes-study-shelf-v1',JSON.stringify([shelfItem,...shelf.filter(p=>p.id!==plan.id)].slice(0,50)));
+          localStorage.setItem(SHELF,JSON.stringify([shelfItem,...shelf.filter(p=>p.id!==plan.id)].slice(0,50)));
         }catch(_){}
         button.textContent='✓ Saved to Study Shelf';
         button.disabled=true;
