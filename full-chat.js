@@ -412,19 +412,17 @@
         input.value = '';
         ensure();
         const chat = current();
-        chat.messages.push({role:'user',content:'Create this video with Runway: ' + prompt});
-        if (chat.title === 'New chat') chat.title = prompt.slice(0,48);
-        save(); render(); setStatus('Opening Creative Studio…');
-        const openStudio = function(){
-          const button=document.querySelector('#vanes-runway-open');
-          if(!button){ setStatus('Creative Studio unavailable'); toast('Creative Studio could not load yet. Refresh once and try again.'); return; }
-          button.click();
-          const runwayInput=document.querySelector('#vanes-runway-prompt');
-          if(runwayInput) runwayInput.value=prompt;
-          setStatus('Runway ready — create your video.');
-        };
-        if(document.querySelector('#vanes-runway-open')) openStudio();
-        else { let n=0; const wait=setInterval(function(){ n++; if(document.querySelector('#vanes-runway-open')){clearInterval(wait);openStudio();} else if(n>=20){clearInterval(wait);openStudio();}},250); }
+        chat.messages.push({ role: 'user', content: 'Create this video with Runway: ' + prompt });
+        if (chat.title === 'New chat') chat.title = prompt.slice(0, 48);
+        save();
+        render();
+        setStatus('Opening Creative Studio…');
+        if (typeof window.VANES_OPEN_RUNWAY === 'function') {
+          window.VANES_OPEN_RUNWAY(prompt);
+        } else {
+          toast('Creative Studio is loading. Please try Generate again in a moment.');
+          setStatus('Creative Studio loading…');
+        }
         return;
       }
 
