@@ -156,3 +156,25 @@
  #workspace .live-clock{flex:1;min-width:0}
  #workspace .session-controls .primary-button{flex:1}
 }
+
+/* VANES dashboard motion + study shelf */
+#dashboard .subject-carousel{overflow:hidden;position:relative;padding:4px 0 14px}
+#dashboard .dashboard-slide-track{display:flex;width:max-content;gap:14px;animation:vanes-dashboard-slide 34s linear infinite}
+#dashboard .dashboard-slide-track:hover{animation-play-state:paused}
+#dashboard .dashboard-slide-track .topic{flex:0 0 270px;min-height:145px}
+@keyframes vanes-dashboard-slide{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 7px))}}
+#dashboard .topic{transition:transform .2s,box-shadow .2s}
+#dashboard .topic:hover{transform:translateY(-4px)}
+#workspace .session-controls,#workspace .live-clock{display:none!important}
+#workspace .workspace-heading{align-items:center}
+#workspace .study-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+#workspace .study-actions .secondary-button{flex:1}
+#planner .session-shelf{display:flex;flex-direction:column;gap:18px;min-height:430px}
+#planner .shelf-list{width:100%;max-height:560px;overflow:auto}
+#planner .shelf-item{min-height:78px}
+#questions .question-layout{align-items:start}
+@media(max-width:760px){
+ #dashboard .dashboard-slide-track{animation-duration:27s}
+ #dashboard .dashboard-slide-track .topic{flex-basis:245px}
+ #workspace .study-actions .secondary-button{flex-basis:100%}
+}
