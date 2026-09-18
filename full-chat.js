@@ -171,30 +171,19 @@ You are an expert study assistant for learners following the Tanzanian secondary
   if(upload){let fileInput=document.querySelector("#imageInput");if(!fileInput){fileInput=document.createElement("input");fileInput.type="file";fileInput.id="imageInput";fileInput.accept="image/*";fileInput.hidden=true;document.body.append(fileInput);}upload.onclick=e=>{e.preventDefault();fileInput.click();};fileInput.onchange=()=>{const f=fileInput.files?.[0];if(!f)return;if(f.size>8*1024*1024){toast("Choose an image smaller than 8 MB.");return;}const r=new FileReader();r.onload=()=>{window.VANES_PENDING_IMAGE=r.result;const p=document.querySelector("#imagePreview");if(p){p.hidden=false;p.innerHTML=`<img src="${escape(r.result)}" alt="Study image preview" style="max-width:100%;max-height:150px;border-radius:8px"><span>Image attached — send a question or instruction.</span>`;}};r.readAsDataURL(f);};}
 
   async function generateImage(){
-    if(generating)return;
     const prompt=input.value.trim();
-    if(!prompt){input.focus();toast("Describe the image you want VANES AI to create.");return;}
+    if(!prompt){input.focus();toast("Describe the educational visual you want VANES to create.");return;}
+    // VANES uses Runway only for visual generation. Never send this prompt through normal chat.
     input.value="";
-    ensureChat(); const c=current();
-    const status=document.createElement("div"); status.className="message coach-message vanes-image-status";
-    status.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI is creating your image</strong><br><small>Turning your idea into a polished visual — composing the scene, refining details and preparing the final image…</small><div class="vanes-image-progress"><i></i></div></div></div>';
-    messagesEl.append(status);messagesEl.scrollTop=messagesEl.scrollHeight;
-    try{
-      const res=await fetch(window.VANES_IMAGE_ENDPOINT||"/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
-      const d=await res.json();
-      if(!res.ok||!Array.isArray(d.images)||!d.images.length)throw new Error(d.error||"No image was returned.");
-      const el=document.createElement("div");el.className="message coach-message image-message";
-      const engine=d.fallbackProvider ? "<small>Created with VANES Free Image · "+escape(d.fallbackProvider)+" engine</small>" : "<small>Created with VANES AI's image engine.</small>";
-      el.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI created your image</strong><br>'+engine+'<div class="vanes-generated-images"></div></div></div>';
-      const box=el.querySelector(".vanes-generated-images");
-      d.images.forEach(src=>{const img=document.createElement("img");img.src=src;img.alt="Image created by VANES AI";img.loading="lazy";box.append(img)});
-      messagesEl.replaceChild(el,status);
-      c.messages.push({role:"user",content:"Create an image: "+prompt});
-      c.messages.push({role:"assistant",content:"VANES AI created an image from the requested description."});
-      save();renderHistory();
-    }catch(err){
-      status.querySelector(".vanes-content").innerHTML='<strong>VANES AI could not create the image</strong><br><small>'+escape(err.message||"Image generation failed.")+'</small>';
+    const runway=document.querySelector("#vanes-runway-open");
+    if(runway){
+      runway.click();
+      const runwayInput=document.querySelector("#vanes-runway-prompt");
+      if(runwayInput){runwayInput.value=prompt;runwayInput.focus();}
+      toast("Runway Creative Studio opened. Review the prompt and create your visual.");
+      return;
     }
+    toast("Runway Creative Studio is still loading. Please try again in a moment.");
   }
   const generate=document.querySelector("#generateButton");
   if(generate)generate.addEventListener("click",generateImage);
