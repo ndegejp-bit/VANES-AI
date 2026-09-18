@@ -38,15 +38,23 @@ function planner(){
         button.id='saveStudyPlan';
         button.type='button';
         button.className='secondary-button';
-        button.textContent='Save this study plan';
+        button.textContent='Save this study plan to Shelf';
         result.appendChild(button);
       }
       button.onclick=()=>{
         const plans=getPlans();
-        plans.unshift({id:crypto.randomUUID?.()||String(Date.now()),subject,goal,time,createdAt:new Date().toISOString()});
-        putPlans(plans.slice(0,50));
-        button.textContent='✓ Saved';
+        const plan={id:crypto.randomUUID?.()||('plan-'+Date.now()),subject,goal,time,createdAt:new Date().toISOString()};
+        putPlans([plan,...plans.filter(p=>p.id!==plan.id)].slice(0,50));
+        try{
+          const shelf=JSON.parse(localStorage.getItem('vanes-study-shelf-v1')||'[]');
+          const shelfItem={...plan,status:'Saved',updatedAt:Date.now(),totalSeconds:0,completedSessions:0};
+          localStorage.setItem('vanes-study-shelf-v1',JSON.stringify([shelfItem,...shelf.filter(p=>p.id!==plan.id)].slice(0,50)));
+        }catch(_){}
+        button.textContent='✓ Saved to Study Shelf';
+        button.disabled=true;
         plansPanel();
+        window.showToast?.('Study plan saved to your Study Shelf ✓');
+        window.dispatchEvent(new CustomEvent('vanes:shelf-updated'));
       };
     },100);
   });
