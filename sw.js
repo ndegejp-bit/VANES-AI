@@ -1,4 +1,4 @@
-const CACHE = 'vanes-shell-v16';
+const CACHE = 'vanes-shell-v17';
 const APP_SHELL = ['/', '/index.html', '/styles.css', '/vanes-enhancements.css', '/vanes-brand.css', '/vanes-reference.css', '/vanes-runtime.js', '/full-chat.js', '/vanes-notes-fix.js', '/vanes-study-system.js', '/vanes-functional-fix-v2.js', '/vanes-profile.js', '/vanes-notifications.js', '/vanes-settings.js', '/vanes-send-fix.js', '/vanes-brand.js', '/vanes-product-upgrade.js', '/vanes-ai-context-fix.js', '/vanes-profile-enforcer.js', '/vanes-mobile.js', '/vanes-runway.js', '/manifest.webmanifest', '/assets/vanes-logo.svg', '/assets/vanes-turbine-wheel.svg', '/assets/ob-technologies-lab.svg', '/assets/ob-tech-labs-brain.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
