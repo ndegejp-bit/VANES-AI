@@ -417,7 +417,7 @@
         save(); render(); setStatus('Opening Creative Studio…');
         const openStudio = function(){
           const button=document.querySelector('#vanes-runway-open');
-          if(!button){ setStatus('Creative Studio unavailable'); toast('Creative Studio could not load.'); return; }
+          if(!button){ setStatus('Creative Studio unavailable'); toast('Creative Studio could not load yet. Refresh once and try again.'); return; }
           button.click();
           const runwayInput=document.querySelector('#vanes-runway-prompt');
           if(runwayInput) runwayInput.value=prompt;
