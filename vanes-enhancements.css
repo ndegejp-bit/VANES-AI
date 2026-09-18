@@ -178,3 +178,6 @@
  #dashboard .dashboard-slide-track .topic{flex-basis:245px}
  #workspace .study-actions .secondary-button{flex-basis:100%}
 }
+
+#subjects .topic-preview{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#subjects .topic-preview span{padding:5px 8px;border:1px solid #1b5276;border-radius:999px;background:#071a2b;color:#8edff2;font-size:9px;font-weight:700}
