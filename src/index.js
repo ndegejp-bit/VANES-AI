@@ -43,8 +43,15 @@ async function handleChat(request,env){
     let lastStatus=503,lastDetail="OpenRouter request failed.";
     for(const model of models){
       for(const candidate of tokenAttempts){
-        const upstream=await fetch(OPENROUTER_URL,{method:"POST",headers:{Authorization:`Bearer ${env.OPENROUTER_API_KEY}`,"Content-Type":"application/json","HTTP-Referer":env.APP_URL||new URL(request.url).origin,"X-Title":"VANES AI"},body:JSON.stringify({model,messages,stream:true,temperature:.4,max_tokens:candidate})});
-        if(upstream.ok)return new Response(upstream.body,{status:200,headers:{...headers,"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache, no-transform","X-VANES-Model":model,"X-VANES-Max-Tokens":String(candidate)}});
+        const upstream=await fetch(OPENROUTER_URL,{method:"POST",headers:{Authorization:`Bearer ${env.OPENROUTER_API_KEY}`,"Content-Type":"application/json","HTTP-Referer":env.APP_URL||new URL(request.url).origin,"X-Title":"VANES AI"},body:JSON.stringify({model,messages,stream:false,temperature:.4,max_tokens:candidate})});
+        if(upstream.ok){
+          const raw=await upstream.text();
+          let data;try{data=JSON.parse(raw)}catch{data={error:raw||"Invalid AI response."}};
+          if(data?.error)return json({error:readableError(data.error,"AI provider returned an error.")},502,headers);
+          const content=extractText(data);
+          if(!content)return json({error:"The AI provider returned an empty response."},502,headers);
+          return json({choices:[{message:{role:"assistant",content}}],model},200,{...headers,"X-VANES-Model":model,"X-VANES-Max-Tokens":String(candidate)});
+        }
         lastStatus=upstream.status;
         lastDetail=(await upstream.text()).slice(0,1000)||`OpenRouter returned HTTP ${upstream.status}`;
         if((lastStatus===400||lastStatus===422)&&hasImageInput)continue;
