@@ -290,7 +290,7 @@
           body: JSON.stringify({
             model: window.VANES_CHAT_MODEL || 'openai/gpt-4o-mini',
             messages: requestMessages,
-            max_tokens: 1200
+            max_tokens: 600
           }),
           signal: aborter.signal
         });
