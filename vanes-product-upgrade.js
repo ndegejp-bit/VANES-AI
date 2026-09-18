@@ -1,6 +1,6 @@
 /* VANES AI product upgrade: saved plans, full-height coach, learner profile, avatars and cyberpunk branding. */
 (function(){'use strict';
-const PROFILE='vanes-learner-profile-v2',PLANS='vanes-saved-study-plans-v1',AVATAR='vanes-profile-picture-v1',DEFAULT='/assets/vanes-turbine-wheel.svg';
+const PROFILE='vanes-learner-profile-v2',PLANS='vanes-saved-study-plans-v1',AVATAR='vanes-profile-picture-v1',DEFAULT='assets/vanes-turbine-wheel.svg';
 const O=['Kiswahili','English Language','Basic Mathematics','Basic Applied Mathematics','History','Geography','Chemistry','Physics','Biology','Civics','Information and Computer Studies','Commerce','Bookkeeping','Agriculture','Food and Nutrition','Fine Art','Music','French','Arabic','Bible Knowledge','Islamic Knowledge','Physical Education','Economics','Business Studies','Computer Applications'];
 const C={PCM:['Physics','Chemistry','Advanced Mathematics'],PCB:['Physics','Chemistry','Biology'],PGM:['Physics','Geography','Advanced Mathematics'],CBG:['Chemistry','Biology','Geography'],CBA:['Chemistry','Biology','Advanced Mathematics'],CBN:['Chemistry','Biology','Nutrition'],EGM:['Economics','Geography','Advanced Mathematics'],ECA:['Economics','Commerce','Advanced Mathematics'],HGE:['History','Geography','Economics'],HGL:['History','Geography','Kiswahili'],HKL:['History','Kiswahili','English Language'],HKA:['History','Kiswahili','Arabic'],HEC:['History','Economics','Commerce'],HGLi:['History','Geography','English Language']};
 const COMMON=['Historia ya Tanzania','Academic Communication'];
