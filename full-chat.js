@@ -177,14 +177,15 @@ You are an expert study assistant for learners following the Tanzanian secondary
     input.value="";
     ensureChat(); const c=current();
     const status=document.createElement("div"); status.className="message coach-message vanes-image-status";
-    status.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI is creating an image</strong><br><small>Designing the scene, shaping the details and preparing your visual…</small></div></div>';
+    status.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI is creating your image</strong><br><small>Turning your idea into a polished visual — composing the scene, refining details and preparing the final image…</small><div class="vanes-image-progress"><i></i></div></div></div>';
     messagesEl.append(status);messagesEl.scrollTop=messagesEl.scrollHeight;
     try{
       const res=await fetch(window.VANES_IMAGE_ENDPOINT||"/api/image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
       const d=await res.json();
       if(!res.ok||!Array.isArray(d.images)||!d.images.length)throw new Error(d.error||"No image was returned.");
       const el=document.createElement("div");el.className="message coach-message image-message";
-      el.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI created this image</strong><br><small>Generated from your description.</small><div class="vanes-generated-images"></div></div></div>';
+      const engine=d.fallbackProvider ? "<small>Created with VANES Free Image · "+escape(d.fallbackProvider)+" engine</small>" : "<small>Created with VANES AI's image engine.</small>";
+      el.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content"><strong>VANES AI created your image</strong><br>'+engine+'<div class="vanes-generated-images"></div></div></div>';
       const box=el.querySelector(".vanes-generated-images");
       d.images.forEach(src=>{const img=document.createElement("img");img.src=src;img.alt="Image created by VANES AI";img.loading="lazy";box.append(img)});
       messagesEl.replaceChild(el,status);
