@@ -385,9 +385,100 @@
 
       if (!assistant || assistant.role !== 'assistant' || !user || user.role !== 'user') return;
 
+      // Regenerate only the assistant response. Calling send() here would append
+      // the same user message a second time and corrupt the conversation history.
       chat.messages.splice(index, 1);
       save();
-      await send(user.content, null);
+      render();
+
+      busy = true;
+      aborter = new AbortController();
+      setStatus('VANES is thinking…');
+
+      const requestMessages = [
+        { role: 'system', content: systemPrompt() }
+      ].concat(chat.messages.slice(-18).map(function (message) {
+        return { role: message.role, content: message.content };
+      }));
+
+      try {
+        const response = await fetch(CHAT_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: window.VANES_CHAT_MODEL || 'openrouter/free',
+            messages: requestMessages,
+            max_tokens: 600
+          }),
+          signal: aborter.signal
+        });
+
+        if (!response.ok) {
+          throw new Error((await response.text()).slice(0, 500) || ('HTTP ' + response.status));
+        }
+
+        const regenerated = { role: 'assistant', content: '' };
+        chat.messages.push(regenerated);
+        render();
+
+        const reader = response.body && response.body.getReader();
+
+        if (reader) {
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+
+            buffer += decoder.decode(chunk.value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            lines.forEach(function (line) {
+              if (!line.startsWith('data:')) return;
+
+              const data = line.slice(5).trim();
+              if (!data || data === '[DONE]') return;
+
+              try {
+                const parsed = JSON.parse(data);
+                const piece = parsed.choices?.[0]?.delta?.content || '';
+                if (!piece) return;
+                regenerated.content += piece;
+                const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
+                if (lastNode) lastNode.innerHTML = md(regenerated.content);
+                messages.scrollTop = messages.scrollHeight;
+              } catch (_) {}
+            });
+          }
+        } else {
+          const data = await response.json();
+          regenerated.content = data.choices?.[0]?.message?.content || data.message || '';
+        }
+
+        if (!regenerated.content) throw new Error('VANES returned an empty response.');
+        save();
+        render();
+        setStatus('Ready');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          chat.messages.push({
+            role: 'assistant',
+            content: 'I could not regenerate that response. ' + (error.message || 'Please try again.')
+          });
+          save();
+          render();
+          setStatus('Connection error');
+        } else {
+          save();
+          render();
+          setStatus('Stopped');
+        }
+      } finally {
+        busy = false;
+        aborter = null;
+      }
     }
 
     function videoIntent(value) {
