@@ -1,6 +1,25 @@
-/* Keep the AI context aligned with the upgraded learner profile. */
-(function(){'use strict';
-const KEY='vanes-learner-profile-v2';const combos={PCM:['Physics','Chemistry','Advanced Mathematics'],PCB:['Physics','Chemistry','Biology'],PGM:['Physics','Geography','Advanced Mathematics'],CBG:['Chemistry','Biology','Geography'],CBA:['Chemistry','Biology','Advanced Mathematics'],CBN:['Chemistry','Biology','Nutrition'],EGM:['Economics','Geography','Advanced Mathematics'],ECA:['Economics','Commerce','Advanced Mathematics'],HGE:['History','Geography','Economics'],HGL:['History','Geography','Kiswahili'],HKL:['History','Kiswahili','English Language'],HKA:['History','Kiswahili','Arabic'],HEC:['History','Economics','Commerce'],HGLi:['History','Geography','English Language']};
-function profile(){try{return JSON.parse(localStorage.getItem(KEY)||localStorage.getItem('vanes-learner-profile-v1')||'null')}catch{return null}}
-const native=window.fetch.bind(window);window.fetch=function(input,init){const url=typeof input==='string'?input:(input?.url||'');if(!/\/api\/chat(?:\?|$)/.test(url)||!init?.body)return native(input,init);try{const b=JSON.parse(init.body),p=profile();if(p&&Array.isArray(b.messages)){const subjects=p.level==='A-Level'?(combos[p.combination]||p.subjects||[]):(p.subjects||[]);const common=p.level==='A-Level'?['Historia ya Tanzania','Academic Communication']:[];const ctx=`Accurate VANES learner profile: name=${p.name}; education level=${p.level}; A-Level combination=${p.combination||'none'}; subjects=${subjects.join(', ')}; common A-Level subjects=${common.join(', ')||'none'}. Personalise the answer to this level and combination. Detect subjects from the learner profile first. Do not treat the learner name alone as profile context.`;const i=b.messages.findIndex(m=>m.role==='system');if(i>=0)b.messages[i]={...b.messages[i],content:`${b.messages[i].content||''}\n\n${ctx}`} ;else b.messages.unshift({role:'system',content:ctx});return native(input,{...init,body:JSON.stringify(b)})}}catch{return native(input,init)}};
+/* VANES AI — learner-profile compatibility bridge.
+ * The primary profile module owns chat context injection. This file only keeps
+ * the v1/v2 profile records synchronized and intentionally does not wrap fetch,
+ * preventing duplicate learner-context system prompts.
+ */
+(function(){
+'use strict';
+const V2='vanes-learner-profile-v2';
+const V1='vanes-learner-profile-v1';
+function read(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
+function sync(){
+  const v2=read(V2),v1=read(V1);
+  const profile=v2||v1;
+  if(!profile)return;
+  try{
+    const value=JSON.stringify(profile);
+    localStorage.setItem(V2,value);
+    localStorage.setItem(V1,value);
+  }catch(_){/* localStorage may be unavailable */}
+}
+sync();
+window.addEventListener('storage',function(event){
+  if(event.key===V1||event.key===V2)sync();
+});
 })();
