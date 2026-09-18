@@ -1,14 +1,11 @@
-# Node.js CI
-# Validates the Node.js runtime used by the project and runs npm build/tests
-# automatically when a Node package is present.
-
+# VANES AI JavaScript validation
 name: Node.js CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -18,14 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
         node-version: [20.x, 22.x, 24.x]
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,8 +30,14 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Validate JavaScript
-        run: node --check app.js
+      - name: Validate all JavaScript files
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            node --check "$file"
+          done < <(find . -type f -name '*.js' -not -path './.git/*' -print0)
 
       - name: Install dependencies
         if: ${{ hashFiles('package-lock.json') != '' }}
