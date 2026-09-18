@@ -2,7 +2,7 @@ import { handleContact } from './contact.js';
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "openai/gpt-4o-mini";
 const DEFAULT_IMAGE_MODEL = "google/gemini-2.5-flash-image";
-const DEFAULT_MAX_TOKENS = 2048;
+const DEFAULT_MAX_TOKENS = 1536;
 const IMAGE_MAX_TOKENS = 1024;
 const MAX_BODY = 9000000;
 function json(data, status = 200, extra = {}) { return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra } }); }
