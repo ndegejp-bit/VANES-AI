@@ -47,6 +47,7 @@ document.addEventListener('click',e=>{
  const card=e.target.closest('.shelf-item');if(!card||e.target.closest('button'))return;
  openShelfSession(shelfRead().find(x=>x.id===card.dataset.shelfId));
 });
+window.VANES_RENDER_SHELF=shelfRender;
 shelfRender();
 document.addEventListener('submit',e=>{
  const form=e.target.closest('#planForm');if(!form)return;
@@ -118,7 +119,7 @@ function complete(){
  const clock=document.querySelector('#sessionClock');if(clock)clock.textContent='00:00:00';
  refresh();
  window.showToast?.(`Session saved ✓ · ${formatClock(seconds)} studied · ${s.name} is ready on your shelf`);
- setTimeout(()=>{window.VANES_SWITCH_VIEW?.('planner');document.querySelector('#planResult')&&shelfRender?.()},650);
+ setTimeout(()=>{window.VANES_SWITCH_VIEW?.('planner');window.VANES_RENDER_SHELF?.()},650);
 }
 function boot(){
 setInterval(updateClock,250);
