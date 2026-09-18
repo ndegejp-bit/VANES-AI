@@ -160,7 +160,7 @@
     }
 
     function videoMarkup(content) {
-      const match = String(content || '').match(/^<VANES_VIDEO>([\\s\\S]+)<\\/VANES_VIDEO>$/);
+      const match = String(content || '').match(/^<VANES_VIDEO>([\s\S]+)<\/VANES_VIDEO>$/);
       if (!match) return null;
       return '<div class="vanes-image-label">✦ Video created by Runway</div>' +
         '<video class="vanes-generated-video" controls playsinline preload="metadata" src="' + esc(match[1]) + '"></video>';
