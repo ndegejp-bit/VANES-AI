@@ -23,16 +23,7 @@ function boot(){
   function id(){return 'chat-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
   function current(){return chats.find(c=>c.id===active)}
   function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-  function md(v){
-    let s=esc(v);
-    s=s.replace(/\`\`\`([\\s\\S]*?)\`\`\`/g,function(_,x){return '<pre><code>'+x.trim()+'</code></pre>'});
-    s=s.replace(/\`([^\`]+)\`/g,'<code>$1</code>');
-    s=s.replace(/^### (.*)$/gm,'<h4>$1</h4>').replace(/^## (.*)$/gm,'<h3>$1</h3>').replace(/^# (.*)$/gm,'<h2>$1</h2>');
-    s=s.replace(/^[-*] (.*)$/gm,'<li>$1</li>').replace(/(?:<li>.*<\\/li>\\n?)+/g,function(x){return '<ul>'+x+'</ul>'});
-    s=s.replace(/\\*\\*(.*?)\\*\\*/g,'<strong>$1</strong>');
-    return s.replace(/\\n/g,'<br>');
-  }
-  function toast(t){if(window.showToast)window.showToast(t)}
+  function md(v){\n    let s=esc(v);\n    s=s.replace(/```([\\s\\S]*?)```/g,function(_,x){return '<pre><code>'+x.trim()+'</code></pre>'});\n    s=s.replace(/`([^`]+)`/g,'<code>$1</code>');\n    s=s.replace(/^### (.*)$/gm,'<h4>$1</h4>').replace(/^## (.*)$/gm,'<h3>$1</h3>').replace(/^# (.*)$/gm,'<h2>$1</h2>');\n    s=s.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');\n    s=s.replace(/\n/g,'<br>');\n    return s;\n  }\n  function toast(t){if(window.showToast)window.showToast(t)}
   function ensure(){
     if(!current()){
       active=id();
