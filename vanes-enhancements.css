@@ -14,3 +14,59 @@
 .orbit-illustration{width:300px;height:200px;top:30px;right:5%;font-size:0}.cyber-ring{position:absolute;width:170px;height:170px;left:65px;top:15px;border:1px solid rgba(143,130,255,.7);border-radius:50%;box-shadow:0 0 28px rgba(99,84,199,.3),inset 0 0 25px rgba(99,84,199,.08);transform:rotateX(65deg) rotateZ(-18deg)}.cyber-ring.ring-two{width:115px;height:115px;left:93px;top:43px;border-style:dashed;transform:rotateY(65deg) rotateZ(25deg)}.cyber-core{position:absolute;left:123px;top:65px;width:55px;height:55px;display:grid;place-items:center;border-radius:14px;background:#14152b;color:#fff;font:700 30px "Space Grotesk",sans-serif;box-shadow:0 0 20px rgba(143,130,255,.55);border:1px solid #9b91ff}.cyber-node{position:absolute;padding:5px 7px;border:1px solid rgba(143,130,255,.7);border-radius:6px;background:#17162c;color:#d7d2ff;font:700 9px "Space Grotesk",sans-serif;box-shadow:0 0 12px rgba(99,84,199,.3)}.node-one{right:10px;top:35px}.node-two{left:25px;bottom:35px}
 @media(max-width:1050px){.subject-carousel{grid-template-columns:repeat(3,minmax(145px,1fr));overflow-x:auto}.dashboard-subject-card{min-width:145px}.coach-layout{grid-template-columns:1fr}.coach-intro{text-align:center}.ai-help{text-align:left}}
 @media(max-width:650px){.brand-badge{font-size:8px}.subject-carousel{grid-template-columns:repeat(2,150px)}.dashboard-subject-card{min-width:150px}.orbit-illustration{display:none}.name-card{padding:24px}.chat-panel{height:560px}#chatForm{flex-wrap:nowrap}.chat-hint{font-size:9px}}
+
+/* Stable VANES chat presentation */
+#coach .chat-panel{display:flex;flex-direction:column;min-height:620px;background:linear-gradient(180deg,#081321,#050b15);border:1px solid #174a70;border-radius:16px;overflow:hidden}
+#coach .vanes-chat-tools{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #174a70;background:rgba(7,18,31,.96)}
+#coach .vanes-chat-title{display:flex;align-items:center;gap:9px;color:#f4fbff;font-size:13px}
+#coach .vanes-chat-title strong{letter-spacing:.5px}
+#coach #vanes-status{color:#6deaff;font-size:10px;font-weight:700}
+#coach .vanes-chat-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#coach .vanes-chat-actions button{border:1px solid #285776;border-radius:8px;background:#0b1b2d;color:#cfe9f7;padding:7px 9px;font:700 10px inherit;cursor:pointer}
+#coach .vanes-chat-actions button:hover{border-color:#00dfff;color:#fff}
+#coach .vanes-chat-actions #vanes-new-chat{background:linear-gradient(110deg,#176cff,#7d35ff);border-color:#00dfff;color:#fff}
+#coach .vanes-chat-history{display:none;max-height:190px;overflow:auto;padding:8px;border-bottom:1px solid #174a70;background:#06101c}
+#coach .vanes-chat-history.open{display:grid;gap:5px}
+#coach .vanes-history-item{display:flex;justify-content:space-between;gap:12px;text-align:left;border:1px solid #183e5a;border-radius:8px;background:#091827;color:#d8edf7;padding:8px 10px;cursor:pointer}
+#coach .vanes-history-item.active{border-color:#00dfff}
+#coach .vanes-history-item small{color:#7897aa}
+#coach .vanes-history-empty{margin:5px;color:#829caf;font-size:11px}
+#coach .messages{flex:1;min-height:260px;overflow-y:auto;padding:22px 18px;scroll-behavior:smooth}
+#coach .message{display:flex;gap:9px;align-items:flex-start;margin:0 0 18px}
+#coach .message>span{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:50%;border:1px solid #00dfff;background:#09243b;color:#62efff;font-size:14px}
+#coach .user-message{justify-content:flex-end}
+#coach .user-message>span{display:none}
+#coach .vanes-bubble{max-width:min(88%,760px);border:1px solid #174c70;border-radius:13px;padding:12px 14px;background:#0b1c2e;color:#eaf7ff;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+#coach .user-message .vanes-bubble{background:linear-gradient(120deg,#173c75,#34205e);border-color:#426fd1}
+#coach .vanes-content{font-size:14px;line-height:1.65;overflow-wrap:anywhere}
+#coach .vanes-content h2,#coach .vanes-content h3,#coach .vanes-content h4{margin:0 0 8px;color:#fff}
+#coach .vanes-content strong{color:#fff}
+#coach .vanes-actions{display:flex;gap:6px;margin-top:9px}
+#coach .vanes-actions button{border:0;background:transparent;color:#74cde9;font-size:10px;cursor:pointer;padding:2px 0}
+#coach .vanes-actions button:hover{color:#fff}
+#coach .vanes-image-label{font-size:10px;color:#7feaff;margin-bottom:8px;font-weight:800}
+#coach .vanes-generated-image{display:block;width:min(100%,560px);height:auto;border-radius:10px;border:1px solid #1c638e}
+#coach .vanes-stop{background:#421c2b!important;border-color:#a94a6b!important;color:#ffb6c9!important}
+#coach #chatForm{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px;border-top:1px solid #174a70;background:#06101b}
+#coach #chatInput{flex:1;min-width:0;min-height:50px;color:#111827!important;background:#fff!important}
+#coach #chatInput::placeholder{color:#6b7280!important}
+#coach #chatForm>button{flex:0 0 48px;width:48px;height:48px;border-radius:11px;border:1px solid #1d5274;background:#0c2034;color:#8feeff;cursor:pointer;font-weight:800}
+#coach #chatForm>button[type="submit"]{background:linear-gradient(120deg,#176cff,#8b35ff);border-color:#8e7aff;color:#fff}
+#coach #chatForm>button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+#coach .chat-hint{flex:0 0 auto;background:#06101b;padding:0 13px 10px;margin:0;color:#7f9aad;font-size:9px}
+@media(max-width:900px){
+  #coach .chat-panel{min-height:560px}
+  #coach .vanes-chat-tools{align-items:flex-start;flex-direction:column}
+  #coach .vanes-chat-actions{width:100%;justify-content:flex-start}
+}
+@media(max-width:650px){
+  #coach .chat-panel{height:calc(100dvh - 170px);min-height:500px}
+  #coach .vanes-chat-tools{padding:9px}
+  #coach .vanes-chat-actions button{padding:6px 8px;font-size:9px}
+  #coach .messages{padding:15px 10px}
+  #coach .vanes-bubble{max-width:94%;padding:10px 11px}
+  #coach .vanes-content{font-size:13.5px}
+  #coach #chatForm{padding:8px}
+  #coach #chatForm>button{flex-basis:42px;width:42px;height:42px}
+}
+
