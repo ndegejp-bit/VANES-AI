@@ -95,3 +95,33 @@
 #coach .howto-list article{padding:12px 0}
 #coach .howto-list p{line-height:1.5}
 @media(max-width:650px){#coach .vanes-howto{min-height:0}#coach .howto-header{padding-bottom:13px}#coach .howto-list article{padding:11px 0}}
+
+/* Persistent study-session shelf */
+#planner .session-shelf{justify-content:flex-start;align-items:stretch;text-align:left;gap:18px;min-height:450px;overflow:visible}
+#planner .shelf-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#planner .shelf-head h2{margin:0 0 5px}
+#planner .shelf-count{display:grid;place-items:center;min-width:34px;height:34px;border-radius:10px;border:1px solid #00dfff;background:#09243b;color:#63eaff;font:800 12px "Space Grotesk",sans-serif}
+#planner .shelf-list{display:grid;gap:9px;overflow:auto;padding-right:2px}
+#planner .shelf-item{display:grid;grid-template-columns:38px 1fr auto auto;align-items:center;gap:10px;padding:12px;border:1px solid #1b5276;border-radius:11px;background:#081827;transition:.16s}
+#planner .shelf-item:hover{border-color:#00dfff;background:#0a1d30}
+#planner .shelf-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#0b3151;color:#5eefff;border:1px solid #17699c}
+#planner .shelf-main{min-width:0}
+#planner .shelf-main strong{display:block;color:#f2f8ff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#planner .shelf-main span,#planner .shelf-main small{display:block;color:#86a9bf;font-size:9px;margin-top:3px}
+#planner .shelf-main small{color:#b5c9d7}
+#planner .shelf-open,#planner .shelf-delete{border:1px solid #285776;border-radius:8px;background:#0b1d30;color:#9defff;padding:7px 9px;font:700 9px inherit;cursor:pointer;white-space:nowrap}
+#planner .shelf-open:hover{border-color:#00dfff;color:#fff}
+#planner .shelf-delete{color:#ff9eb5;border-color:#63354a}
+#planner .shelf-delete:hover{border-color:#ff668b;background:#301523;color:#fff}
+#planner .shelf-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:25px}
+#planner .shelf-empty .empty-illustration{margin-bottom:14px}
+#planner .shelf-empty h2{margin:0 0 8px}
+#planner .shelf-empty p{max-width:390px;color:var(--muted);font-size:12px;line-height:1.6}
+#planner .support-copy{color:var(--muted);font-size:11px;line-height:1.5;margin:4px 0 0}
+@media(max-width:650px){
+ #planner .session-shelf{min-height:400px}
+ #planner .shelf-item{grid-template-columns:34px 1fr;gap:8px}
+ #planner .shelf-open,#planner .shelf-delete{grid-column:auto}
+ #planner .shelf-open{grid-column:2;justify-self:start}
+ #planner .shelf-delete{grid-column:2;justify-self:start;margin-left:72px;margin-top:-33px}
+}
