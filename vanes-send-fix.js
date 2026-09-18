@@ -2,6 +2,7 @@
 (function(){
 'use strict';
 const API='https://vanes-ai.obtechnologies625.workers.dev';
+const PLANS_KEY='vanes-saved-study-plans-v1';
 
 // The static app may be opened from GitHub Pages, a local server, or the Worker itself.
 // Route VANES API calls to the live backend so Send buttons do not depend on a local /api route.
@@ -42,7 +43,13 @@ function planSubmit(e){
     `${Math.max(5,minutes-Math.max(10,Math.round(minutes*0.45))-Math.max(5,Math.round(minutes*0.30))-5)} min — Review mistakes and self-test.`
   ];
   if(result){
-    result.innerHTML=`<div class="empty-illustration">✦</div><h2>${escapeHtml(title)} study plan</h2><p><strong>Goal:</strong> ${escapeHtml(goal)} · <strong>Time:</strong> ${minutes} minutes</p><ol>${steps.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ol><button class="primary-button" type="button" id="startGeneratedPlan">Start this session →</button>`;
+    result.innerHTML=`<div class="empty-illustration">✦</div><h2>${escapeHtml(title)} study plan</h2><p><strong>Goal:</strong> ${escapeHtml(goal)} · <strong>Time:</strong> ${minutes} minutes</p><ol>${steps.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ol><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary-button" type="button" id="startGeneratedPlan">Start this session →</button><button class="secondary-button" type="button" id="saveGeneratedPlan">Save this study plan</button></div>`;
+    result.querySelector('#saveGeneratedPlan').onclick=()=>{
+      let plans=[];try{plans=JSON.parse(localStorage.getItem(PLANS_KEY)||'[]')}catch(_){plans=[]}
+      plans.unshift({id:crypto.randomUUID?.()||String(Date.now()),subject:raw,goal,time:minutes,createdAt:new Date().toISOString()});
+      localStorage.setItem(PLANS_KEY,JSON.stringify(plans.slice(0,50)));
+      result.querySelector('#saveGeneratedPlan').textContent='✓ Saved';
+    };
     result.querySelector('#startGeneratedPlan').onclick=()=>{
       const topicMap=document.querySelector('#topicMap');
       const workspace=document.querySelector('#workspace');
