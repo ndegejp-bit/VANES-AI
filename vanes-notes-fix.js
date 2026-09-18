@@ -34,7 +34,7 @@ function saveShelfSession(subject,level,goal,time,raw){
 function openShelfSession(item){
  if(!item)return;
  const topicList=(custom[item.subject]?.topics)||['Recall','Learn the core idea','Practice questions','Review and self-test'];
- openSession(item.subject,item.level,item.raw||item.subject+' · '+item.goal,topicList);
+ openSession(item.subject,item.level,item.raw||item.subject+' · '+item.goal,topicList); startSessionTimer(item.id);
  const all=shelfRead().map(x=>x.id===item.id?{...x,updatedAt:Date.now()}:x);shelfWrite(all);
 }
 document.addEventListener('click',e=>{
@@ -57,12 +57,72 @@ document.addEventListener('submit',e=>{
  const name=match||base;
  const item=saveShelfSession(name,level,goal,time,raw);
  const topicList=(custom[name]?.topics)||['Recall','Learn the core idea','Practice questions','Review and self-test'];
- openSession(name,level,raw+' · '+goal,topicList);
+ openSession(name,level,raw+' · '+goal,topicList); startSessionTimer(item.id);
  window.showToast?.('Study session saved to your shelf');
 },true);
 }function support(){const grid=document.querySelector('.workspace-grid');if(!grid||document.querySelector('.session-support'))return;const p=document.createElement('article');p.className='panel session-support';p.innerHTML=`<div><p class="eyebrow">STUDY SUMMARY</p><h2>Your session summary</h2><p class="support-copy">Keep the key ideas, formulas, examples and questions you want to remember.</p><textarea id="sessionSummary" placeholder="Write your summary here…"></textarea><div class="note-footer"><span id="summaryStatus">Saved locally</span><span id="summaryCount">0 words</span></div></div><div><p class="eyebrow">LIVE AI ASSISTANCE</p><h2>Ask while you study</h2><p class="support-copy">Get AI help without leaving this study session.</p><div class="ai-quick"><button type="button" data-aiq="Explain this topic simply">Explain this</button><button type="button" data-aiq="Give me one practice question and wait for my answer">Practice me</button><button type="button" data-aiq="Check my notes and tell me what I should improve">Check my notes</button></div><form id="sessionAiForm"><input id="sessionAiInput" placeholder="Ask about this lesson…"><button class="primary-button" type="submit">Ask AI</button></form><div id="sessionAiAnswer" class="session-ai-answer">Your AI help will appear here.</div></div>`;grid.appendChild(p);p.querySelector('#sessionSummary').addEventListener('input',e=>{const s=subject(),all=read(SUM,{});all[s.key]=e.target.value;write(SUM,all);p.querySelector('#summaryStatus').textContent='Saved just now';p.querySelector('#summaryCount').textContent=`${e.target.value.trim()?e.target.value.trim().split(/\s+/).length:0} words`});p.querySelectorAll('[data-aiq]').forEach(b=>b.onclick=()=>{p.querySelector('#sessionAiInput').value=b.dataset.aiq;p.querySelector('#sessionAiInput').focus()});p.querySelector('#sessionAiForm').addEventListener('submit',askAI)}
 async function askAI(e){e.preventDefault();const input=document.querySelector('#sessionAiInput'),out=document.querySelector('#sessionAiAnswer');if(!input?.value.trim())return;const s=subject(),notes=document.querySelector('#sessionSummary')?.value||document.querySelector('#notes')?.value||'';out.textContent='VANES is thinking…';try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:`You are VANES AI inline study assistance. Never redirect the student to the AI study coach or another page. Current subject: ${s.name}, level: ${s.level}. Follow Tanzanian curriculum context and answer concisely.`},{role:'user',content:`Notes:\n${notes.slice(-6000)}\n\nQuestion: ${input.value.trim()}`} ]})});if(!r.ok)throw 0;const rd=r.body.getReader(),dec=new TextDecoder();let buf='',answer='';while(true){const {value,done}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});const ls=buf.split('\n');buf=ls.pop()||'';for(const line of ls){if(!line.startsWith('data:'))continue;const x=line.slice(5).trim();if(!x||x==='[DONE]')continue;try{const j=JSON.parse(x),d=j.choices?.[0]?.delta?.content;if(d){answer+=d;out.textContent=answer}}catch{}}}}catch{out.textContent='AI assistance is temporarily unavailable. Please try again.'}input.value=''}
-function complete(){const s=subject(),t=read(TRACK,{subjects:{},minutes:0}),chips=[...document.querySelectorAll('#topicMap .topic-chip.active')].map(x=>x.textContent.trim()),all=[...document.querySelectorAll('#topicMap .topic-chip')].map(x=>x.textContent.trim()),e=t.subjects[s.key]||{done:[],total:all.length||1,sessions:0};e.total=all.length||e.total||1;chips.forEach(x=>{if(!e.done.includes(x))e.done.push(x)});if(!chips.length&&all[0]&&!e.done.includes(all[0]))e.done.push(all[0]);e.sessions=(e.sessions||0)+1;t.subjects[s.key]=e;t.minutes+=(Math.max(1,Math.round((Date.now()-Number(document.querySelector('#workspace').dataset.sessionStarted||Date.now()))/60000)));const d=day(),st=read(STREAK,{count:0,last:null});if(st.last!==d)st.count=st.last===new Date(Date.now()-86400000).toISOString().slice(0,10)?st.count+1:1;st.last=d;write(STREAK,st);write(TRACK,t);refresh();window.showToast?.(`Progress saved · ${Math.round(e.done.length/e.total*100)}% in ${s.name}`)}
-function boot(){const n=document.querySelector('#notes'),s=document.querySelector('#saveStatus');n?.addEventListener('input',()=>{localStorage.setItem(keyFromView(),n.value);localStorage.setItem(oldKey(),n.value);if(s)s.textContent='Saved locally'});document.querySelector('#clearNotes')?.addEventListener('click',()=>{localStorage.removeItem(keyFromView());localStorage.removeItem(oldKey())});support();planner();document.addEventListener('click',e=>{if(e.target.closest('#completeSession')){e.preventDefault();e.stopImmediatePropagation();complete()}},true);new MutationObserver(removeGeneralAddCorrect).observe(document.querySelector('#subjectGrid')||document.body,{childList:true,subtree:true});setTimeout(removeGeneralAddCorrect,100);setInterval(refresh,1500)}
+function formatClock(sec){
+ const s=Math.max(0,Math.floor(sec)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;
+ return [h,m,x].map(v=>String(v).padStart(2,'0')).join(':');
+}
+const ACTIVE_SESSION='vanes-active-study-session-v1',SHELF='vanes-study-shelf-v1';
+function activeSession(){return read(ACTIVE_SESSION,null)}
+function startSessionTimer(shelfId){
+ const state={shelfId:shelfId||null,startedAt:Date.now(),accumulatedSeconds:0};
+ write(ACTIVE_SESSION,state);
+ const w=document.querySelector('#workspace');if(w)w.dataset.sessionStarted=String(state.startedAt);
+ updateClock();
+}
+function elapsedSession(){
+ const s=activeSession();if(!s)return 0;
+ return Math.max(0,(Number(s.accumulatedSeconds)||0)+Math.floor((Date.now()-Number(s.startedAt||Date.now()))/1000));
+}
+function updateClock(){
+ const el=document.querySelector('#sessionClock');if(!el)return;
+ const s=activeSession();
+ el.textContent=formatClock(s?elapsedSession():0);
+}
+function sessionShelfUpdate(id,patch){
+ if(!id)return;
+ const items=read(SHELF,[]);
+ const i=items.findIndex(x=>x.id===id);
+ if(i<0)return;
+ items[i]={...items[i],...patch,updatedAt:Date.now()};
+ write(SHELF,items);
+}
+function complete(){
+ const s=subject(),t=read(TRACK,{subjects:{},minutes:0}),chips=[...document.querySelectorAll('#topicMap .topic-chip.active')].map(x=>x.textContent.trim()),all=[...document.querySelectorAll('#topicMap .topic-chip')].map(x=>x.textContent.trim()),e=t.subjects[s.key]||{done:[],total:all.length||1,sessions:0};
+ e.total=all.length||e.total||1;
+ chips.forEach(x=>{if(!e.done.includes(x))e.done.push(x)});
+ if(!chips.length&&all[0]&&!e.done.includes(all[0]))e.done.push(all[0]);
+ e.sessions=(e.sessions||0)+1;
+ const seconds=elapsedSession(),minutes=Math.max(1,Math.round(seconds/60));
+ t.subjects[s.key]=e;t.minutes+=(seconds>0?minutes:0);
+ const d=day(),st=read(STREAK,{count:0,last:null});
+ if(st.last!==d)st.count=st.last===new Date(Date.now()-86400000).toISOString().slice(0,10)?st.count+1:1;
+ st.last=d;write(STREAK,st);
+ const active=activeSession();
+ if(active?.shelfId){
+   const items=read(SHELF,[]);
+   const item=items.find(x=>x.id===active.shelfId);
+   if(item)sessionShelfUpdate(active.shelfId,{
+     elapsedSeconds:(Number(item.elapsedSeconds)||0)+seconds,
+     completedSessions:(Number(item.completedSessions)||0)+1,
+     lastCompletedAt:Date.now(),
+     status:'Completed'
+   });
+ }
+ write(TRACK,t);
+ localStorage.removeItem(ACTIVE_SESSION);
+ const clock=document.querySelector('#sessionClock');if(clock)clock.textContent='00:00:00';
+ refresh();
+ window.showToast?.(`Session saved ✓ · ${formatClock(seconds)} studied · ${s.name} is ready on your shelf`);
+ setTimeout(()=>{window.VANES_SWITCH_VIEW?.('planner');document.querySelector('#planResult')&&shelfRender?.()},650);
+}
+function boot(){
+setInterval(updateClock,250);
+updateClock();
+const n=document.querySelector('#notes'),s=document.querySelector('#saveStatus');n?.addEventListener('input',()=>{localStorage.setItem(keyFromView(),n.value);localStorage.setItem(oldKey(),n.value);if(s)s.textContent='Saved locally'});document.querySelector('#clearNotes')?.addEventListener('click',()=>{localStorage.removeItem(keyFromView());localStorage.removeItem(oldKey())});support();planner();document.addEventListener('click',e=>{if(e.target.closest('#completeSession')){e.preventDefault();e.stopImmediatePropagation();complete()}},true);new MutationObserver(removeGeneralAddCorrect).observe(document.querySelector('#subjectGrid')||document.body,{childList:true,subtree:true});setTimeout(removeGeneralAddCorrect,100);setInterval(refresh,1500)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
