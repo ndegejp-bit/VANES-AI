@@ -54,8 +54,12 @@ async function handleChat(request,env){
         }
         lastStatus=upstream.status;
         lastDetail=(await upstream.text()).slice(0,1000)||`OpenRouter returned HTTP ${upstream.status}`;
-        if((lastStatus===400||lastStatus===422)&&hasImageInput)continue;
-        if(lastStatus!==402||!hasCreditError(lastDetail))break;
+        if(lastStatus===400||lastStatus===404||lastStatus===422){
+          if(hasEndpointError(lastDetail)||hasImageInput)continue;
+          break;
+        }
+        if([402,408,409,429,500,502,503,504].includes(lastStatus))continue;
+        break;
       }
       if(![402,408,409,429,500,502,503,504].includes(lastStatus))break;
     }
