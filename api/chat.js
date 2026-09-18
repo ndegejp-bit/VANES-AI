@@ -22,9 +22,13 @@ export default async function handler(req, res) {
     }
 
     const requested = typeof body.model === "string" ? body.model.trim() : "";
-    const models = requested && MODELS.includes(requested)
-      ? [requested, ...MODELS.filter(m => m !== requested)]
-      : MODELS;
+    const messages = body.messages.slice(-24);
+    const hasImageInput = messages.some(m => Array.isArray(m?.content) && m.content.some(part => part?.type === "image_url" || part?.type === "input_image"));
+    const visionModels = ["google/gemma-3-27b-it:free", "openrouter/free"];
+    const orderedModels = hasImageInput ? visionModels : MODELS;
+    const models = requested && orderedModels.includes(requested)
+      ? [requested, ...orderedModels.filter(m => m !== requested)]
+      : orderedModels;
     const requestedTokens = Number(body.max_tokens);
     const maxTokens = Number.isFinite(requestedTokens)
       ? Math.min(Math.max(requestedTokens, 128), 700)
@@ -46,7 +50,7 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             model,
-            messages: body.messages.slice(-24),
+            messages,
             stream: true,
             temperature: 0.4,
             max_tokens
@@ -70,6 +74,7 @@ export default async function handler(req, res) {
         lastError = (await upstream.text()).slice(0, 1000) || `OpenRouter returned HTTP ${upstream.status}`;
         // A 402 caused by token affordability gets a smaller request before the
         // next model; other retryable failures move directly to the next model.
+        if (lastStatus === 400 || lastStatus === 422) { if (hasImageInput) continue; break; }
         if (lastStatus !== 402) break;
         if (!/credits|credit|afford|limit|insufficient/i.test(lastError)) break;
       }
