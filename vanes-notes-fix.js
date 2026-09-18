@@ -49,6 +49,24 @@ document.addEventListener('click',e=>{
 });
 window.VANES_RENDER_SHELF=shelfRender;
 shelfRender();
+document.addEventListener('click',e=>{
+ const btn=e.target.closest('#startPlan[data-study-start]');
+ if(!btn)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const raw=btn.dataset.studyStart||'Study',goal=btn.dataset.studyGoal||'Study',time=Number(btn.dataset.studyTime||45);
+ const base=raw.split(/\s+[—–-]\s+/)[0].trim();
+ const match=Object.keys(custom).find(n=>n.toLowerCase()===base.toLowerCase());
+ const card=[...document.querySelectorAll('#subjectGrid .subject-card')].find(c=>c.querySelector('h2')?.textContent.trim().toLowerCase()===base.toLowerCase());
+ const level=match?custom[match].level:(card?.querySelector('.pill')?.textContent.trim()||'O-Level');
+ const name=match||base;
+ const item=saveShelfSession(name,level,goal,time,raw);
+ const topicList=(custom[name]?.topics)||['Recall','Learn the core idea','Practice questions','Review and self-test'];
+ startSessionTimer(item.id);
+ openSession(name,level,raw+' · '+goal,topicList);
+ updateClock();
+ window.showToast?.('Study session started ✓ · Timer is running');
+},true);
+
 document.addEventListener('submit',e=>{
  const form=e.target.closest('#planForm');if(!form)return;
  e.preventDefault();e.stopImmediatePropagation();
@@ -70,7 +88,9 @@ function formatClock(sec){
 const ACTIVE_SESSION='vanes-active-study-session-v1',SHELF='vanes-study-shelf-v1';
 function activeSession(){return read(ACTIVE_SESSION,null)}
 function startSessionTimer(shelfId){
- const state={shelfId:shelfId||null,startedAt:Date.now(),accumulatedSeconds:0};
+ const items=read(SHELF,[]);
+ const existing=items.find(x=>x.id===shelfId);
+ const state={shelfId:shelfId||null,startedAt:Date.now(),accumulatedSeconds:Number(existing?.elapsedSeconds)||0};
  write(ACTIVE_SESSION,state);
  const w=document.querySelector('#workspace');if(w)w.dataset.sessionStarted=String(state.startedAt);
  updateClock();
