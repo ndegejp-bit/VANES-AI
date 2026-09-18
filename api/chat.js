@@ -1,99 +1,24 @@
-// VANES AI — Vercel-compatible secure chat endpoint.
-// Keep provider credentials server-side. This route mirrors the Cloudflare worker's
-// free-first fallback behaviour so deployments do not silently use the old paid model.
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODELS = [
-  "openrouter/free",
-  "qwen/qwen3-32b:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemma-3-27b-it:free"
-];
-const RETRYABLE = new Set([402,408,409,429,500,502,503,504]);
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
-
-  try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    if (!Array.isArray(body.messages) || !body.messages.length) {
-      return res.status(400).json({ error: "messages must be a non-empty array" });
-    }
-
-    const requested = typeof body.model === "string" ? body.model.trim() : "";
-    const messages = body.messages.slice(-24);
-    const hasImageInput = messages.some(m => Array.isArray(m?.content) && m.content.some(part => part?.type === "image_url" || part?.type === "input_image"));
-    const visionModels = ["google/gemma-3-27b-it:free", "openrouter/free"];
-    const orderedModels = hasImageInput ? visionModels : MODELS;
-    const models = requested && orderedModels.includes(requested)
-      ? [requested, ...orderedModels.filter(m => m !== requested)]
-      : orderedModels;
-    const requestedTokens = Number(body.max_tokens);
-    const maxTokens = Number.isFinite(requestedTokens)
-      ? Math.min(Math.max(requestedTokens, 128), 700)
-      : 600;
-    const tokenAttempts = [maxTokens, ...[512,384,256,160].filter(n => n < maxTokens)];
-
-    let lastStatus = 503;
-    let lastError = "OpenRouter request failed.";
-
-    for (const model of models) {
-      for (const max_tokens of tokenAttempts) {
-        const upstream = await fetch(OPENROUTER_URL, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": process.env.APP_URL || "https://vanes-ai.vercel.app",
-            "X-Title": "VANES AI"
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            stream: true,
-            temperature: 0.4,
-            max_tokens
-          })
-        });
-
-        if (upstream.ok) {
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-          res.setHeader("Cache-Control", "no-cache, no-transform");
-          res.setHeader("Connection", "keep-alive");
-          res.setHeader("X-VANES-Model", model);
-          if (upstream.body) {
-            for await (const chunk of upstream.body) res.write(Buffer.from(chunk));
-          }
-          res.end();
-          return;
-        }
-
-        lastStatus = upstream.status;
-        lastError = (await upstream.text()).slice(0, 1000) || `OpenRouter returned HTTP ${upstream.status}`;
-        // A 402 caused by token affordability gets a smaller request before the
-        // next model; other retryable failures move directly to the next model.
-        if (lastStatus === 400 || lastStatus === 422) { if (hasImageInput) continue; break; }
-        if (lastStatus !== 402) break;
-        if (!/credits|credit|afford|limit|insufficient/i.test(lastError)) break;
-      }
-      if (!RETRYABLE.has(lastStatus)) break;
-    }
-
-    if (lastStatus === 402) {
-      return res.status(402).json({
-        error: "Free OpenRouter models were unavailable. Please try again shortly.",
-        code: 402
-      });
-    }
-    return res.status(lastStatus).json({
-      error: "VANES could not get a response from the available OpenRouter models.",
-      detail: lastError
-    });
-  } catch (error) {
-    console.error("VANES chat error", error);
-    if (!res.headersSent) return res.status(502).json({ error: "Unable to reach the AI service." });
-    res.end();
-  }
+// VANES AI — clean Vercel question-answer endpoint.
+const URL="https://openrouter.ai/api/v1/chat/completions";
+const MODELS=["qwen/qwen3-32b:free","meta-llama/llama-3.3-70b-instruct:free","google/gemma-3-27b-it:free","openrouter/free"];
+function textOf(data){const c=data?.choices?.[0]?.message?.content;if(typeof c==="string")return c;if(Array.isArray(c))return c.map(x=>typeof x==="string"?x:x?.text||"").join("\n");return data?.output_text||data?.choices?.[0]?.text||""}
+function errOf(data,raw){return String(data?.error?.message||data?.error||data?.detail||raw||"OpenRouter request failed.").slice(0,800)}
+export default async function handler(req,res){
+ if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
+ const key=process.env.OPENROUTER_API_KEY;if(!key)return res.status(500).json({error:"VANES AI server is missing OPENROUTER_API_KEY."});
+ let body;try{body=typeof req.body==="string"?JSON.parse(req.body):(req.body||{})}catch{return res.status(400).json({error:"Invalid JSON body."})}
+ if(!Array.isArray(body.messages)||!body.messages.length)return res.status(400).json({error:"Please send a question."});
+ const messages=body.messages.slice(-18);
+ const hasImage=messages.some(m=>Array.isArray(m?.content)&&m.content.some(p=>p?.type==="image_url"||p?.type==="input_image"));
+ const models=hasImage?["google/gemma-3-27b-it:free","openrouter/free"]:MODELS;
+ let lastStatus=502,lastDetail="No model returned an answer.";
+ for(const model of models){
+  try{
+   const r=await fetch(URL,{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json","HTTP-Referer":process.env.APP_URL||"https://vanes-ai.vercel.app","X-Title":"VANES AI"},body:JSON.stringify({model,messages,stream:false,temperature:.3,max_tokens:Math.min(Math.max(Number(body.max_tokens)||600,128),700)})});
+   const raw=await r.text();let data=null;try{data=raw?JSON.parse(raw):null}catch(_){}
+   if(r.ok){const answer=textOf(data).trim();if(answer)return res.status(200).json({choices:[{message:{role:"assistant",content:answer}}],model});lastStatus=502;lastDetail="Model "+model+" returned no answer text.";continue}
+   lastStatus=r.status;lastDetail=errOf(data,raw);continue;
+  }catch(e){lastStatus=502;lastDetail=e?.message||"Network error contacting OpenRouter.";continue}
+ }
+ return res.status(lastStatus>=400&&lastStatus<600?lastStatus:502).json({error:"VANES could not produce an answer.",detail:lastDetail,code:lastStatus});
 }
