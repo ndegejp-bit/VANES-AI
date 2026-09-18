@@ -29,3 +29,5 @@
 
 
 .vanes-image-status .vanes-content{background:transparent!important;padding:2px 0!important}.vanes-image-status small,.image-message small{color:#91a4b8}.vanes-generated-images{display:grid;gap:12px;margin-top:12px}.vanes-generated-images img{display:block;width:min(100%,620px);max-height:620px;object-fit:contain;border-radius:14px;border:1px solid #26384c;box-shadow:0 12px 35px rgba(0,0,0,.25)}@media(max-width:650px){.vanes-generated-images img{max-height:55vh;border-radius:10px}}
+
+.vanes-image-progress{height:4px;margin-top:12px;border-radius:99px;overflow:hidden;background:#182536}.vanes-image-progress i{display:block;width:38%;height:100%;animation:vanesImageProgress 1.25s ease-in-out infinite alternate;background:linear-gradient(90deg,#18c8ff,#8b5cf6,#ff4fd8)}@keyframes vanesImageProgress{from{transform:translateX(-10%)}to{transform:translateX(190%)}}
