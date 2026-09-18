@@ -125,3 +125,19 @@
  #planner .shelf-open{grid-column:2;justify-self:start}
  #planner .shelf-delete{grid-column:2;justify-self:start;margin-left:72px;margin-top:-33px}
 }
+
+/* Live study session timer */
+#workspace .session-controls{display:flex;align-items:center;gap:12px}
+#workspace .live-clock{display:flex;align-items:center;gap:8px;min-height:46px;padding:7px 12px;border:1px solid #1b587d;border-radius:10px;background:#071a2b}
+#workspace .clock-dot{width:7px;height:7px;border-radius:50%;background:#35efff;box-shadow:0 0 10px #35efff;animation:vanes-clock-pulse 1.4s ease-in-out infinite}
+#workspace .clock-label{font-size:8px;font-weight:800;letter-spacing:1px;color:#7da7bd}
+#workspace #sessionClock{font:800 16px "DM Sans",sans-serif;letter-spacing:1px;color:#f5fbff;font-variant-numeric:tabular-nums}
+@keyframes vanes-clock-pulse{50%{opacity:.35;transform:scale(.75)}}
+#planner .shelf-item{grid-template-columns:38px 1fr auto auto}
+#planner .shelf-main .shelf-time{display:block;color:#63eaff;font-size:9px;margin-top:3px}
+#planner .shelf-status{display:inline-flex;align-items:center;margin-top:4px;padding:3px 6px;border-radius:999px;border:1px solid #255b72;color:#9fd9e7;background:#0a2030;font-size:8px;font-weight:800}
+@media(max-width:760px){
+ #workspace .workspace-heading{gap:12px}
+ #workspace .session-controls{flex-wrap:wrap}
+ #workspace .live-clock{order:0}
+}
