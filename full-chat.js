@@ -119,7 +119,7 @@
     const apiMessages=[{role:"system",content:systemPrompt()},...c.messages.slice(-18).map(m=>({role:m.role,content:m.content}))];
     if(image) apiMessages[apiMessages.length-1].content=userContent;
     try {
-      const res=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,messages:apiMessages}),signal:controller.signal});
+      const res=await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,messages:apiMessages,max_tokens:1536}),signal:controller.signal});
       if(!res.ok){let detail=await res.text();throw new Error(detail.slice(0,500)||`HTTP ${res.status}`);}
       let answer="";
       const reader=res.body?.getReader();
@@ -133,7 +133,7 @@
       } else { const data=await res.json(); answer=data.choices?.[0]?.message?.content||""; if(!answer)throw new Error("The AI returned an empty response."); c.messages.push({role:"assistant",content:answer}); }
       save(); renderHistory(); renderMessages();
     } catch(err) {
-      if(err.name !== "AbortError"){ c.messages.push({role:"assistant",content:`I couldn't reach the VANES AI service. ${err.message}\n\nIf you are using GitHub Pages, deploy the API separately (for example on Vercel) and set VANES_CHAT_ENDPOINT to that API URL.`}); save(); renderMessages(); }
+      if(err.name !== "AbortError"){ c.messages.push({role:"assistant",content:`I couldn't reach the VANES AI service. ${err.message}`}); save(); renderMessages(); }
     } finally { generating=false; controller=null; document.querySelector("#vanes-stop").hidden=true; document.querySelector("#vanes-status").textContent="Ready"; }
   }
 
