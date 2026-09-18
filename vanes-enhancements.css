@@ -141,3 +141,18 @@
  #workspace .session-controls{flex-wrap:wrap}
  #workspace .live-clock{order:0}
 }
+
+/* Highly visible active-session timer */
+#workspace .live-clock{min-width:245px;justify-content:center;flex-wrap:wrap;column-gap:8px;row-gap:2px;padding:9px 14px;box-sizing:border-box}
+#workspace .live-clock #sessionClock{font-size:22px;line-height:1.1;min-width:92px;text-align:center}
+#workspace .clock-running{display:inline-block;font-size:8px;font-weight:900;letter-spacing:.8px;color:#62eaff}
+#workspace .live-clock:not(.active){opacity:1}
+#planner .session-shelf{width:100%;box-sizing:border-box;max-height:none;overflow:visible}
+#planner .shelf-list{max-height:560px;overflow-y:auto}
+#planner .shelf-item{min-height:72px}
+#planner .shelf-time{font-variant-numeric:tabular-nums}
+@media(max-width:760px){
+ #workspace .session-controls{width:100%;align-items:stretch}
+ #workspace .live-clock{flex:1;min-width:0}
+ #workspace .session-controls .primary-button{flex:1}
+}
