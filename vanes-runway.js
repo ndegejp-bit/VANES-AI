@@ -12,6 +12,7 @@ function addStyles(){const s=document.createElement('style');s.textContent=`
 .vanes-runway-card label{display:block;color:#b9cbe0;font-size:11px;font-weight:800;margin:12px 0}.vanes-runway-card textarea,.vanes-runway-card select{width:100%;margin-top:7px;background:#081423!important;color:#eef7ff!important;border:1px solid #294b6d!important;border-radius:10px;padding:11px;font:400 13px inherit}.vanes-runway-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.vanes-runway-start{width:100%;margin-top:15px;border:1px solid #00dfff;background:linear-gradient(135deg,#126cff,#9a35ff);color:#fff;border-radius:11px;padding:12px;font-weight:800;cursor:pointer}.vanes-runway-note{font-size:10px;color:#8098af;line-height:1.5;margin-top:10px}.vanes-runway-status{margin-top:15px;padding:12px;border:1px solid #29415e;border-radius:11px;background:#081321;color:#cfe0ef;font-size:12px}.vanes-runway-video{width:100%;margin-top:12px;border-radius:12px;border:1px solid #31537a;background:#000}.vanes-runway-image{max-width:100%;border-radius:12px;border:1px solid #31537a;margin-top:12px}` ;document.head.append(s)}
 function mount(){
  addStyles();
+ window.VANES_RUNWAY_READY=false;
  const panel=document.querySelector('#coach .chat-panel'); if(!panel)return;
  const tools=panel.querySelector('.vanes-chat-tools'); if(!tools||document.querySelector('#vanes-runway-open'))return;
  const b=document.createElement('button');b.id='vanes-runway-open';b.className='vanes-runway-btn';b.type='button';b.textContent='✦ Runway Create';tools.insertBefore(b,tools.querySelector('#vanes-status'));
@@ -35,12 +36,25 @@ function mount(){
    for(let i=0;i<45;i++){await new Promise(r=>setTimeout(r,4000));const q=await fetch(API+'?task='+encodeURIComponent(d.taskId));task=await q.json();const pct=typeof task.progress==='number'?Math.round(task.progress*100):null;status.innerHTML='<b>Runway is rendering…</b><br><small>'+esc(task.status||'PROCESSING')+(pct!==null?' · '+pct+'%':'')+'</small>';if(task.status==='SUCCEEDED'||task.status==='FAILED'||task.status==='CANCELLED')break}
    if(task?.status!=='SUCCEEDED')throw new Error(task?.failure||'Runway render did not complete in time.');
    const outputs=Array.isArray(task.output)?task.output:(Array.isArray(task.outputs)?task.outputs:[]);if(!outputs.length)throw new Error('Runway completed but returned no video URL.');
-   status.innerHTML='<b>VANES created your video with Runway ✦</b><video class="vanes-runway-video" controls playsinline src="'+esc(outputs[0])+'"></video><br><small>Runway output is ready inside VANES.</small>';
+   const videoUrl=outputs[0];
+   status.innerHTML='<b>VANES created your video with Runway ✦</b><video class="vanes-runway-video" controls playsinline src="'+esc(videoUrl)+'"></video><br><small>Runway output is ready inside VANES.</small>';
+   window.dispatchEvent(new CustomEvent('vanes:runway-result',{detail:{url:videoUrl,prompt:prompt}}));
   }catch(e){status.innerHTML='<b>Runway could not create the video.</b><br><small>'+esc(e.message||'Generation failed.')+'</small><br><small>Make sure the private RUNWAY_API_KEY is configured on the VANES Cloudflare Worker.</small>'}
   finally{modal.querySelector('#vanes-runway-start').disabled=false}
  }
  modal.querySelector('#vanes-runway-start').onclick=create;
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(mount,250),{once:true});else setTimeout(mount,250);
+function bootRunway(){
+  let tries=0;
+  const attempt=()=>{
+    tries++;
+    mount();
+    if(document.querySelector('#vanes-runway-open')){window.VANES_RUNWAY_READY=true;return;}
+    if(tries<30)setTimeout(attempt,500);
+    else window.VANES_RUNWAY_READY=false;
+  };
+  attempt();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootRunway,{once:true});else bootRunway();
 window.VANES_RUNWAY_ENDPOINT=window.VANES_RUNWAY_ENDPOINT||'/api/video';
 })();
