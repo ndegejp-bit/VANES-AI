@@ -297,7 +297,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: window.VANES_CHAT_MODEL || 'openai/gpt-4o-mini',
+            model: window.VANES_CHAT_MODEL || 'openrouter/free',
             messages: requestMessages,
             max_tokens: 600
           }),
