@@ -1,153 +1,578 @@
 /* VANES AI — stable chat UI and conversation engine. */
-(function(){
-'use strict';
+(function () {
+  'use strict';
 
-function boot(){
-  const panel=document.querySelector('#coach .chat-panel');
-  const messages=document.querySelector('#messages');
-  const form=document.querySelector('#chatForm');
-  const input=document.querySelector('#chatInput');
-  if(!panel||!messages||!form||!input){return;}
+  function boot() {
+    const panel = document.querySelector('#coach .chat-panel');
+    const messages = document.querySelector('#messages');
+    const form = document.querySelector('#chatForm');
+    const input = document.querySelector('#chatInput');
 
-  const KEY='vanes-chat-conversations-v1';
-  const ACTIVE='vanes-chat-active-v1';
-  const CHAT_API=window.VANES_CHAT_ENDPOINT||'/api/chat';
-  const IMAGE_API=window.VANES_IMAGE_ENDPOINT||'/api/image';
-  let chats=read(KEY,[]);
-  let active=localStorage.getItem(ACTIVE)||'';
-  let busy=false;
-  let aborter=null;
+    if (!panel || !messages || !form || !input) return;
+    if (panel.dataset.vanesChatBooted === '1') return;
+    panel.dataset.vanesChatBooted = '1';
 
-  function read(k,f){try{return JSON.parse(localStorage.getItem(k))||f}catch(e){return f}}
-  function save(){localStorage.setItem(KEY,JSON.stringify(chats.slice(0,30)));}
-  function id(){return 'chat-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
-  function current(){return chats.find(c=>c.id===active)}
-  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-  function md(v){\n    let s=esc(v);\n    s=s.replace(/```([\\s\\S]*?)```/g,function(_,x){return '<pre><code>'+x.trim()+'</code></pre>'});\n    s=s.replace(/`([^`]+)`/g,'<code>$1</code>');\n    s=s.replace(/^### (.*)$/gm,'<h4>$1</h4>').replace(/^## (.*)$/gm,'<h3>$1</h3>').replace(/^# (.*)$/gm,'<h2>$1</h2>');\n    s=s.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');\n    s=s.replace(/\n/g,'<br>');\n    return s;\n  }\n  function toast(t){if(window.showToast)window.showToast(t)}
-  function ensure(){
-    if(!current()){
-      active=id();
-      chats.unshift({id:active,title:'New chat',messages:[]});
-      localStorage.setItem(ACTIVE,active);save();
-    }
-  }
-  function renderTools(){
-    let tools=panel.querySelector('.vanes-chat-tools');
-    if(!tools){
-      tools=document.createElement('div');
-      tools.className='vanes-chat-tools';
-      tools.innerHTML='<button type="button" class="primary" id="vanes-new-chat">＋ New chat</button><button type="button" id="vanes-history-toggle">☰ History</button><button type="button" id="vanes-clear-history">Clear history</button><span id="vanes-status">Ready</span>';
-      panel.insertBefore(tools,messages);
-    }
-    let history=panel.querySelector('#vanes-chat-history');
-    if(!history){
-      history=document.createElement('div');history.id='vanes-chat-history';history.className='vanes-chat-history';panel.insertBefore(history,messages);
-    }
-    tools.querySelector('#vanes-new-chat').onclick=function(){active=id();chats.unshift({id:active,title:'New chat',messages:[]});localStorage.setItem(ACTIVE,active);save();render()};
-    tools.querySelector('#vanes-history-toggle').onclick=function(){history.classList.toggle('open');renderHistory()};
-    tools.querySelector('#vanes-clear-history').onclick=function(){if(confirm('Delete all saved VANES chats from this browser?')){chats=[];active='';localStorage.removeItem(ACTIVE);ensure();save();render()}};
-    renderHistory();
-  }
-  function renderHistory(){
-    const h=panel.querySelector('#vanes-chat-history');if(!h)return;
-    h.innerHTML=chats.slice(0,12).map(function(c){return '<button type="button" class="vanes-history-item '+(c.id===active?'active':'')+'" data-chat-id="'+esc(c.id)+'"><strong>'+esc(c.title||'New chat')+'</strong><small>'+c.messages.filter(function(m){return m.role!=='system'}).length+' messages</small></button>'}).join('')||'<p class="vanes-history-empty">No saved chats yet.</p>';
-    h.querySelectorAll('[data-chat-id]').forEach(function(b){b.onclick=function(){active=b.getAttribute('data-chat-id');localStorage.setItem(ACTIVE,active);render()}})
-  }
-  function imageMarkup(content){
-    const m=String(content||'').match(/^<VANES_IMAGE>([\\s\\S]+)<\\/VANES_IMAGE>$/);
-    if(!m)return null;
-    return '<div>✦ Image created by VANES AI</div><img class="vanes-generated-image" src="'+esc(m[1])+'" alt="AI-generated educational visual">';
-  }
-  function render(){
-    ensure();renderHistory();messages.innerHTML='';
-    const c=current();
-    if(!c.messages.length){
-      messages.innerHTML='<div class="message coach-message"><span>✦</span><div class="vanes-bubble"><div class="vanes-content">Hi! I\'m VANES AI. Ask me anything in English or Kiswahili. I can explain, analyse, practise, mark, plan, summarise, translate and work with study images.</div></div></div>';
-      return;
-    }
-    c.messages.forEach(function(m,i){
-      if(m.role==='system')return;
-      const el=document.createElement('div');el.className='message '+(m.role==='user'?'user-message':'coach-message');
-      if(m.role==='assistant'){
-        const im=imageMarkup(m.content);
-        el.innerHTML='<span>✦</span><div class="vanes-bubble"><div class="vanes-content">'+(im||md(m.content))+'</div><div class="vanes-actions"><button type="button" data-copy="'+i+'">Copy</button><button type="button" data-regenerate="'+i+'">Regenerate</button></div></div>';
-      }else{
-        el.innerHTML='<div class="vanes-bubble"><div class="vanes-content">'+md(m.content)+'</div><div class="vanes-actions"><button type="button" data-edit="'+i+'">Edit</button></div></div>';
+    const KEY = 'vanes-chat-conversations-v1';
+    const ACTIVE = 'vanes-chat-active-v1';
+    const CHAT_API = window.VANES_CHAT_ENDPOINT || '/api/chat';
+    const IMAGE_API = window.VANES_IMAGE_ENDPOINT || '/api/image';
+
+    let chats = read(KEY, []);
+    let active = localStorage.getItem(ACTIVE) || '';
+    let busy = false;
+    let aborter = null;
+
+    function read(key, fallback) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return value || fallback;
+      } catch (_) {
+        return fallback;
       }
-      messages.appendChild(el);
-    });
-    messages.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){navigator.clipboard?.writeText(c.messages[+b.dataset.copy].content);toast('Copied')}});
-    messages.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){input.value=c.messages[+b.dataset.edit].content;input.focus()}});
-    messages.querySelectorAll('[data-regenerate]').forEach(function(b){b.onclick=function(){regenerate(+b.dataset.regenerate)}});
-    messages.scrollTop=messages.scrollHeight;
-  }
-  function setStatus(t){const s=panel.querySelector('#vanes-status');if(s)s.textContent=t}
-  function system(){
-    return 'You are VANES AI — Versatile Adaptive Neuro Emergent System — created by OB Technologies / OB Tech-Labs. You are an adaptive AI study assistant for the Tanzanian secondary-school curriculum. Detect subject and O-Level/CSEE or A-Level/ACSEE context from the learner profile and question. Explain step by step, show working for maths/science, mark work transparently, and answer in the learner\'s language. Never invent facts about OB Technologies or syllabus details that you cannot verify.';
-  }
-  async function send(text,image){
-    ensure();const c=current();
-    c.messages.push({role:'user',content:text||'Please analyse the attached study image.'});
-    if(c.title==='New chat')c.title=(text||'Study image').slice(0,48);
-    save();render();busy=true;aborter=new AbortController();setStatus('VANES is thinking…');
-    const body={model:window.VANES_CHAT_MODEL||'openai/gpt-4o-mini',messages:[{role:'system',content:system()}].concat(c.messages.slice(-18).map(function(m){return {role:m.role,content:m.content}})),max_tokens:1200};
-    if(image)body.messages[body.messages.length-1].content=[{type:'text',text:text||'Analyse this study image carefully.'},{type:'image_url',image_url:{url:image}}];
-    try{
-      const res=await fetch(CHAT_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:aborter.signal});
-      if(!res.ok)throw new Error((await res.text()).slice(0,500)||('HTTP '+res.status));
-      const a={role:'assistant',content:''};c.messages.push(a);render();
-      const reader=res.body&&res.body.getReader();
-      if(reader){
-        const dec=new TextDecoder();let buf='';
-        while(true){
-          const q=await reader.read();if(q.done)break;buf+=dec.decode(q.value,{stream:true});
-          const lines=buf.split('\\n');buf=lines.pop()||'';
-          lines.forEach(function(line){if(!line.startsWith('data:'))return;const d=line.slice(5).trim();if(!d||d==='[DONE]')return;try{const j=JSON.parse(d),x=j.choices?.[0]?.delta?.content||'';a.content+=x;const node=messages.lastElementChild?.querySelector('.vanes-content');if(node)node.innerHTML=md(a.content);messages.scrollTop=messages.scrollHeight}catch(e){}});
+    }
+
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(chats.slice(0, 30)));
+    }
+
+    function makeId() {
+      return 'chat-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+    }
+
+    function current() {
+      return chats.find(function (chat) { return chat.id === active; });
+    }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function (char) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
+      });
+    }
+
+    function md(value) {
+      let text = esc(value);
+      text = text.replace(/^### (.*)$/gm, '<h4>$1</h4>');
+      text = text.replace(/^## (.*)$/gm, '<h3>$1</h3>');
+      text = text.replace(/^# (.*)$/gm, '<h2>$1</h2>');
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/\n/g, '<br>');
+      return text;
+    }
+
+    function toast(message) {
+      if (window.showToast) window.showToast(message);
+    }
+
+    function ensure() {
+      if (!current()) {
+        active = makeId();
+        chats.unshift({ id: active, title: 'New chat', messages: [] });
+        localStorage.setItem(ACTIVE, active);
+        save();
+      }
+    }
+
+    function renderTools() {
+      let tools = panel.querySelector('.vanes-chat-tools');
+
+      if (!tools) {
+        tools = document.createElement('div');
+        tools.className = 'vanes-chat-tools';
+        tools.innerHTML =
+          '<div class="vanes-chat-title"><strong>VANES AI</strong><span id="vanes-status">Ready</span></div>' +
+          '<div class="vanes-chat-actions">' +
+          '<button type="button" class="primary" id="vanes-new-chat">＋ New chat</button>' +
+          '<button type="button" id="vanes-history-toggle">☰ History</button>' +
+          '<button type="button" id="vanes-clear-history">Clear</button>' +
+          '</div>';
+        panel.insertBefore(tools, messages);
+      }
+
+      let history = panel.querySelector('#vanes-chat-history');
+
+      if (!history) {
+        history = document.createElement('div');
+        history.id = 'vanes-chat-history';
+        history.className = 'vanes-chat-history';
+        panel.insertBefore(history, messages);
+      }
+
+      tools.querySelector('#vanes-new-chat').onclick = function () {
+        active = makeId();
+        chats.unshift({ id: active, title: 'New chat', messages: [] });
+        localStorage.setItem(ACTIVE, active);
+        save();
+        render();
+      };
+
+      tools.querySelector('#vanes-history-toggle').onclick = function () {
+        history.classList.toggle('open');
+        renderHistory();
+      };
+
+      tools.querySelector('#vanes-clear-history').onclick = function () {
+        if (!confirm('Delete all saved VANES chats from this browser?')) return;
+        chats = [];
+        active = '';
+        localStorage.removeItem(ACTIVE);
+        ensure();
+        save();
+        render();
+      };
+
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const history = panel.querySelector('#vanes-chat-history');
+      if (!history) return;
+
+      history.innerHTML = chats.slice(0, 12).map(function (chat) {
+        const count = chat.messages.filter(function (message) {
+          return message.role !== 'system';
+        }).length;
+
+        return '<button type="button" class="vanes-history-item ' +
+          (chat.id === active ? 'active' : '') +
+          '" data-chat-id="' + esc(chat.id) + '">' +
+          '<strong>' + esc(chat.title || 'New chat') + '</strong>' +
+          '<small>' + count + ' messages</small>' +
+          '</button>';
+      }).join('') || '<p class="vanes-history-empty">No saved chats yet.</p>';
+
+      history.querySelectorAll('[data-chat-id]').forEach(function (button) {
+        button.onclick = function () {
+          active = button.getAttribute('data-chat-id');
+          localStorage.setItem(ACTIVE, active);
+          render();
+        };
+      });
+    }
+
+    function imageMarkup(content) {
+      const match = String(content || '').match(/^<VANES_IMAGE>([\s\S]+)<\/VANES_IMAGE>$/);
+      if (!match) return null;
+
+      return '<div class="vanes-image-label">✦ Image created by VANES AI</div>' +
+        '<img class="vanes-generated-image" src="' + esc(match[1]) +
+        '" alt="AI-generated educational visual">';
+    }
+
+    function render() {
+      ensure();
+      renderTools();
+      messages.innerHTML = '';
+
+      const chat = current();
+
+      if (!chat.messages.length) {
+        messages.innerHTML =
+          '<div class="message coach-message">' +
+          '<span>✦</span>' +
+          '<div class="vanes-bubble">' +
+          '<div class="vanes-content">' +
+          '<strong>Hi! I’m VANES AI.</strong><br>' +
+          'Ask me anything in English or Kiswahili. I can explain, analyse, practise, mark, plan, summarise, translate and work with study images.' +
+          '</div></div></div>';
+        return;
+      }
+
+      chat.messages.forEach(function (message, index) {
+        if (message.role === 'system') return;
+
+        const element = document.createElement('div');
+        element.className = 'message ' +
+          (message.role === 'user' ? 'user-message' : 'coach-message');
+
+        if (message.role === 'assistant') {
+          const image = imageMarkup(message.content);
+
+          element.innerHTML =
+            '<span>✦</span>' +
+            '<div class="vanes-bubble">' +
+            '<div class="vanes-content">' + (image || md(message.content)) + '</div>' +
+            '<div class="vanes-actions">' +
+            '<button type="button" data-copy="' + index + '">Copy</button>' +
+            '<button type="button" data-regenerate="' + index + '">Regenerate</button>' +
+            '</div></div>';
+        } else {
+          element.innerHTML =
+            '<div class="vanes-bubble">' +
+            '<div class="vanes-content">' + md(message.content) + '</div>' +
+            '<div class="vanes-actions">' +
+            '<button type="button" data-edit="' + index + '">Edit</button>' +
+            '</div></div>';
         }
-      }else{
-        const d=await res.json();a.content=d.choices?.[0]?.message?.content||'';
-      }
-      if(!a.content)throw new Error('VANES returned an empty response.');
-      save();render();setStatus('Ready');
-    }catch(e){
-      if(e.name!=='AbortError'){c.messages.push({role:'assistant',content:'I could not reach VANES AI. '+(e.message||'Please try again.')});save();render();setStatus('Connection error')}
-    }finally{busy=false;aborter=null}
-  }
-  async function regenerate(i){
-    if(busy)return;const c=current(),a=c?.messages[i],u=c?.messages[i-1];if(!a||a.role!=='assistant'||!u||u.role!=='user')return;
-    c.messages.splice(i,1);save();await send(u.content,null);
-  }
-  function videoIntent(s){return /\\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|camera movement|time-lapse|timelapse|vfx)\\b/i.test(s)}
-  async function generate(){
-    const p=input.value.trim();if(!p){input.focus();toast('Describe what you want VANES to create.');return}
-    if(videoIntent(p)){
-      const b=document.querySelector('#vanes-runway-open');
-      if(b){b.click();const x=document.querySelector('#vanes-runway-prompt');if(x)x.value=p;toast('Video request opened in VANES Creative Studio.');}
-      else toast('Creative Studio is still loading.');
-      return;
+
+        messages.appendChild(element);
+      });
+
+      messages.querySelectorAll('[data-copy]').forEach(function (button) {
+        button.onclick = function () {
+          const message = chat.messages[Number(button.dataset.copy)];
+          if (!message) return;
+          navigator.clipboard?.writeText(message.content);
+          toast('Copied');
+        };
+      });
+
+      messages.querySelectorAll('[data-edit]').forEach(function (button) {
+        button.onclick = function () {
+          const message = chat.messages[Number(button.dataset.edit)];
+          if (!message) return;
+          input.value = message.content;
+          input.focus();
+        };
+      });
+
+      messages.querySelectorAll('[data-regenerate]').forEach(function (button) {
+        button.onclick = function () {
+          regenerate(Number(button.dataset.regenerate));
+        };
+      });
+
+      messages.scrollTop = messages.scrollHeight;
     }
-    ensure();const c=current();c.messages.push({role:'user',content:'Create this educational visual: '+p});save();render();input.value='';setStatus('Creating image…');
-    try{
-      const res=await fetch(IMAGE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:p})});
-      const d=await res.json().catch(function(){return{}});
-      if(!res.ok||!d.ok||!Array.isArray(d.images)||!d.images.length)throw new Error(d.error||'The image service returned no image.');
-      c.messages.push({role:'assistant',content:'<VANES_IMAGE>'+d.images[0]+'</VANES_IMAGE>'});save();render();toast('Image created.');
-    }catch(e){c.messages.push({role:'assistant',content:'I could not create that image. '+(e.message||'Please try again.')});save();render()}
-    finally{setStatus('Ready')}
+
+    function setStatus(text) {
+      const status = panel.querySelector('#vanes-status');
+      if (status) status.textContent = text;
+    }
+
+    function systemPrompt() {
+      return [
+        'You are VANES AI — Versatile Adaptive Neuro Emergent System — created by OB Technologies / OB Tech-Labs.',
+        'You are an adaptive AI study assistant for the Tanzanian secondary-school curriculum.',
+        'Detect the subject and O-Level/CSEE or A-Level/ACSEE context from the learner profile and question.',
+        'Explain step by step, show working for mathematics and science, mark work transparently, and answer in the learner’s language.',
+        'Never invent facts about OB Technologies or syllabus details that you cannot verify.'
+      ].join(' ');
+    }
+
+    async function send(text, image) {
+      ensure();
+      const chat = current();
+
+      chat.messages.push({
+        role: 'user',
+        content: text || 'Please analyse the attached study image.'
+      });
+
+      if (chat.title === 'New chat') {
+        chat.title = (text || 'Study image').slice(0, 48);
+      }
+
+      save();
+      render();
+
+      busy = true;
+      aborter = new AbortController();
+      setStatus('VANES is thinking…');
+
+      const requestMessages = [
+        { role: 'system', content: systemPrompt() }
+      ].concat(chat.messages.slice(-18).map(function (message) {
+        return { role: message.role, content: message.content };
+      }));
+
+      if (image) {
+        const last = requestMessages[requestMessages.length - 1];
+        last.content = [
+          { type: 'text', text: text || 'Analyse this study image carefully.' },
+          { type: 'image_url', image_url: { url: image } }
+        ];
+      }
+
+      try {
+        const response = await fetch(CHAT_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: window.VANES_CHAT_MODEL || 'openai/gpt-4o-mini',
+            messages: requestMessages,
+            max_tokens: 1200
+          }),
+          signal: aborter.signal
+        });
+
+        if (!response.ok) {
+          throw new Error((await response.text()).slice(0, 500) || ('HTTP ' + response.status));
+        }
+
+        const assistant = { role: 'assistant', content: '' };
+        chat.messages.push(assistant);
+        render();
+
+        const reader = response.body && response.body.getReader();
+
+        if (reader) {
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+
+            buffer += decoder.decode(chunk.value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            lines.forEach(function (line) {
+              if (!line.startsWith('data:')) return;
+
+              const data = line.slice(5).trim();
+              if (!data || data === '[DONE]') return;
+
+              try {
+                const parsed = JSON.parse(data);
+                const piece = parsed.choices?.[0]?.delta?.content || '';
+                if (!piece) return;
+
+                assistant.content += piece;
+                const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
+                if (lastNode) lastNode.innerHTML = md(assistant.content);
+                messages.scrollTop = messages.scrollHeight;
+              } catch (_) {}
+            });
+          }
+        } else {
+          const data = await response.json();
+          assistant.content = data.choices?.[0]?.message?.content || data.message || '';
+        }
+
+        if (!assistant.content) {
+          throw new Error('VANES returned an empty response.');
+        }
+
+        save();
+        render();
+        setStatus('Ready');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          chat.messages.push({
+            role: 'assistant',
+            content: 'I could not reach VANES AI. ' + (error.message || 'Please try again.')
+          });
+          save();
+          render();
+          setStatus('Connection error');
+        } else {
+          save();
+          render();
+          setStatus('Stopped');
+        }
+      } finally {
+        busy = false;
+        aborter = null;
+      }
+    }
+
+    async function regenerate(index) {
+      if (busy) return;
+
+      const chat = current();
+      const assistant = chat?.messages[index];
+      const user = chat?.messages[index - 1];
+
+      if (!assistant || assistant.role !== 'assistant' || !user || user.role !== 'user') return;
+
+      chat.messages.splice(index, 1);
+      save();
+      await send(user.content, null);
+    }
+
+    function videoIntent(value) {
+      return /\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|camera movement|time-lapse|timelapse|vfx)\b/i.test(value);
+    }
+
+    async function generate() {
+      const prompt = input.value.trim();
+
+      if (!prompt) {
+        input.focus();
+        toast('Describe what you want VANES to create.');
+        return;
+      }
+
+      if (videoIntent(prompt)) {
+        const button = document.querySelector('#vanes-runway-open');
+
+        if (button) {
+          button.click();
+          const runwayInput = document.querySelector('#vanes-runway-prompt');
+          if (runwayInput) runwayInput.value = prompt;
+          toast('Video request opened in VANES Creative Studio.');
+        } else {
+          toast('Creative Studio is still loading.');
+        }
+        return;
+      }
+
+      ensure();
+      const chat = current();
+
+      chat.messages.push({
+        role: 'user',
+        content: 'Create this educational visual: ' + prompt
+      });
+
+      if (chat.title === 'New chat') chat.title = prompt.slice(0, 48);
+
+      save();
+      render();
+      input.value = '';
+      setStatus('Creating image…');
+
+      try {
+        const response = await fetch(IMAGE_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt })
+        });
+
+        const data = await response.json().catch(function () { return {}; });
+
+        if (!response.ok || !data.ok || !Array.isArray(data.images) || !data.images.length) {
+          throw new Error(data.error || 'The image service returned no image.');
+        }
+
+        chat.messages.push({
+          role: 'assistant',
+          content: '<VANES_IMAGE>' + data.images[0] + '</VANES_IMAGE>'
+        });
+
+        save();
+        render();
+        toast('Image created.');
+      } catch (error) {
+        chat.messages.push({
+          role: 'assistant',
+          content: 'I could not create that image. ' + (error.message || 'Please try again.')
+        });
+        save();
+        render();
+      } finally {
+        setStatus('Ready');
+      }
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (busy) return;
+
+      const text = input.value.trim();
+      const image = window.VANES_PENDING_IMAGE || null;
+
+      if (!text && !image) return;
+
+      input.value = '';
+      window.VANES_PENDING_IMAGE = null;
+
+      const preview = document.querySelector('#imagePreview');
+
+      if (preview) {
+        preview.hidden = true;
+        preview.innerHTML = '';
+      }
+
+      send(text, image);
+    });
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    const upload = document.querySelector('#uploadButton');
+
+    if (upload) {
+      let fileInput = document.querySelector('#imageInput');
+
+      if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'imageInput';
+        fileInput.accept = 'image/*';
+        fileInput.hidden = true;
+        document.body.appendChild(fileInput);
+      }
+
+      upload.onclick = function (event) {
+        event.preventDefault();
+        fileInput.click();
+      };
+
+      fileInput.onchange = function () {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        if (file.size > 8 * 1024 * 1024) {
+          toast('Choose an image smaller than 8 MB.');
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function () {
+          window.VANES_PENDING_IMAGE = reader.result;
+
+          const preview = document.querySelector('#imagePreview');
+
+          if (preview) {
+            preview.hidden = false;
+            preview.innerHTML =
+              '<img src="' + esc(reader.result) +
+              '" alt="Study image preview">' +
+              '<span>Image attached — send a question or instruction.</span>';
+          }
+        };
+
+        reader.readAsDataURL(file);
+      };
+    }
+
+    const generateButton = document.querySelector('#generateButton');
+
+    if (generateButton) {
+      generateButton.onclick = function (event) {
+        event.preventDefault();
+        if (!busy) generate();
+      };
+    }
+
+    let stop = document.querySelector('#vanes-stop');
+
+    if (!stop) {
+      stop = document.createElement('button');
+      stop.type = 'button';
+      stop.id = 'vanes-stop';
+      stop.className = 'vanes-stop';
+      stop.textContent = '■';
+      stop.title = 'Stop response';
+      stop.setAttribute('aria-label', 'Stop response');
+      stop.hidden = true;
+      form.insertBefore(stop, form.lastElementChild);
+    }
+
+    stop.onclick = function () {
+      if (aborter) aborter.abort();
+    };
+
+    const observer = new MutationObserver(function () {
+      stop.hidden = !busy;
+    });
+
+    observer.observe(stop, { attributes: true });
+
+    ensure();
+    render();
   }
-  form.addEventListener('submit',function(e){e.preventDefault();if(busy)return;const t=input.value.trim(),im=window.VANES_PENDING_IMAGE||null;if(!t&&!im)return;input.value='';window.VANES_PENDING_IMAGE=null;const p=document.querySelector('#imagePreview');if(p){p.hidden=true;p.innerHTML=''}send(t,im)});
-  input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))}});
-  const upload=document.querySelector('#uploadButton');
-  if(upload){
-    let fi=document.querySelector('#imageInput');if(!fi){fi=document.createElement('input');fi.type='file';fi.id='imageInput';fi.accept='image/*';fi.hidden=true;document.body.appendChild(fi)}
-    upload.onclick=function(e){e.preventDefault();fi.click()};
-    fi.onchange=function(){const f=fi.files&&fi.files[0];if(!f)return;if(f.size>8*1024*1024){toast('Choose an image smaller than 8 MB.');return}const r=new FileReader();r.onload=function(){window.VANES_PENDING_IMAGE=r.result;const p=document.querySelector('#imagePreview');if(p){p.hidden=false;p.innerHTML='<img src="'+esc(r.result)+'" alt="Study image preview" style="max-width:100%;max-height:150px;border-radius:8px"><span>Image attached — send a question or instruction.</span>'}};r.readAsDataURL(f)}
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
   }
-  const gen=document.querySelector('#generateButton');if(gen)gen.onclick=function(e){e.preventDefault();if(!busy)generate()};
-  let stop=document.querySelector('#vanes-stop');if(!stop){stop=document.createElement('button');stop.type='button';stop.id='vanes-stop';stop.className='vanes-stop';stop.textContent='■';stop.hidden=true;form.insertBefore(stop,form.lastElementChild)}
-  stop.onclick=function(){if(aborter)aborter.abort()};
-  const oldStop=new MutationObserver(function(){stop.hidden=!busy});oldStop.observe(stop,{attributes:true});
-  renderTools();ensure();render();
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
