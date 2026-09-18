@@ -15,6 +15,66 @@
     const KEY = 'vanes-chat-conversations-v1';
     const ACTIVE = 'vanes-chat-active-v1';
     const CHAT_API = window.VANES_CHAT_ENDPOINT || '/api/chat';
+    const CHAT_FALLBACKS = [...new Set([CHAT_API, '/api/chat'].filter(Boolean))];
+
+    async function requestChat(payload, signal) {
+      let lastError = null;
+      for (const endpoint of CHAT_FALLBACKS) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream, application/json' },
+            body: JSON.stringify(payload),
+            signal: signal
+          });
+          if (response.ok) return response;
+          const raw = await response.text();
+          let message = raw;
+          try { message = JSON.parse(raw).error || JSON.parse(raw).detail || raw; } catch (_) {}
+          lastError = new Error(String(message || ('HTTP ' + response.status)).slice(0, 700));
+          if (response.status >= 500 || response.status === 404) continue;
+          throw lastError;
+        } catch (error) {
+          lastError = error;
+          if (error.name === 'AbortError') throw error;
+        }
+      }
+      throw lastError || new Error('Unable to reach VANES AI.');
+    }
+
+    async function readChatResponse(response, onPiece) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.body || !contentType.includes('text/event-stream')) {
+        const data = await response.json().catch(async function () { return { message: await response.text() }; });
+        const value = data.choices?.[0]?.message?.content || data.message || data.error || '';
+        if (value) onPiece(String(value));
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const lines = buffer.split(/\\r?\\n/);
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const raw = parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content ?? '';
+            const piece = Array.isArray(raw) ? raw.map(x => typeof x === 'string' ? x : (x?.text || '')).join('') : String(raw || '');
+            if (piece) onPiece(piece);
+            if (parsed.error) throw new Error(parsed.error.message || 'AI provider returned an error.');
+          } catch (error) {
+            if (error.message && !/^Unexpected token/.test(error.message)) throw error;
+          }
+        }
+      }
+    }
     const IMAGE_API = window.VANES_IMAGE_ENDPOINT || '/api/image';
     const RUNWAY_API = window.VANES_RUNWAY_ENDPOINT || '/api/video';
 
@@ -315,61 +375,23 @@
       }
 
       try {
-        const response = await fetch(CHAT_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: window.VANES_CHAT_MODEL || 'openrouter/free',
-            messages: requestMessages,
-            max_tokens: 600
-          }),
-          signal: aborter.signal
-        });
+        const response = await requestChat({
+          model: window.VANES_CHAT_MODEL || 'openrouter/free',
+          messages: requestMessages,
+          max_tokens: 600
+        }, aborter.signal);
 
-        if (!response.ok) {
-          throw new Error((await response.text()).slice(0, 500) || ('HTTP ' + response.status));
-        }
 
         const assistant = { role: 'assistant', content: '' };
         chat.messages.push(assistant);
         render();
 
-        const reader = response.body && response.body.getReader();
-
-        if (reader) {
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const chunk = await reader.read();
-            if (chunk.done) break;
-
-            buffer += decoder.decode(chunk.value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            lines.forEach(function (line) {
-              if (!line.startsWith('data:')) return;
-
-              const data = line.slice(5).trim();
-              if (!data || data === '[DONE]') return;
-
-              try {
-                const parsed = JSON.parse(data);
-                const piece = parsed.choices?.[0]?.delta?.content || '';
-                if (!piece) return;
-
-                assistant.content += piece;
-                const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
-                if (lastNode) lastNode.innerHTML = md(assistant.content);
-                messages.scrollTop = messages.scrollHeight;
-              } catch (_) {}
-            });
-          }
-        } else {
-          const data = await response.json();
-          assistant.content = data.choices?.[0]?.message?.content || data.message || '';
-        }
+        await readChatResponse(response, function (piece) {
+          assistant.content += piece;
+          const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
+          if (lastNode) lastNode.innerHTML = md(assistant.content);
+          messages.scrollTop = messages.scrollHeight;
+        });
 
         if (!assistant.content) {
           throw new Error('VANES returned an empty response.');
@@ -382,7 +404,7 @@
         if (error.name !== 'AbortError') {
           chat.messages.push({
             role: 'assistant',
-            content: 'I could not reach VANES AI. ' + (error.message || 'Please try again.')
+            content: 'VANES could not connect to the AI service. ' + (error.message || 'Please check your connection and try again.')
           });
           save();
           render();
@@ -424,60 +446,23 @@
       }));
 
       try {
-        const response = await fetch(CHAT_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: window.VANES_CHAT_MODEL || 'openrouter/free',
-            messages: requestMessages,
-            max_tokens: 600
-          }),
-          signal: aborter.signal
-        });
+        const response = await requestChat({
+          model: window.VANES_CHAT_MODEL || 'openrouter/free',
+          messages: requestMessages,
+          max_tokens: 600
+        }, aborter.signal);
 
-        if (!response.ok) {
-          throw new Error((await response.text()).slice(0, 500) || ('HTTP ' + response.status));
-        }
 
         const regenerated = { role: 'assistant', content: '' };
         chat.messages.push(regenerated);
         render();
 
-        const reader = response.body && response.body.getReader();
-
-        if (reader) {
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const chunk = await reader.read();
-            if (chunk.done) break;
-
-            buffer += decoder.decode(chunk.value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            lines.forEach(function (line) {
-              if (!line.startsWith('data:')) return;
-
-              const data = line.slice(5).trim();
-              if (!data || data === '[DONE]') return;
-
-              try {
-                const parsed = JSON.parse(data);
-                const piece = parsed.choices?.[0]?.delta?.content || '';
-                if (!piece) return;
-                regenerated.content += piece;
-                const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
-                if (lastNode) lastNode.innerHTML = md(regenerated.content);
-                messages.scrollTop = messages.scrollHeight;
-              } catch (_) {}
-            });
-          }
-        } else {
-          const data = await response.json();
-          regenerated.content = data.choices?.[0]?.message?.content || data.message || '';
-        }
+        await readChatResponse(response, function (piece) {
+          regenerated.content += piece;
+          const lastNode = messages.lastElementChild?.querySelector('.vanes-content');
+          if (lastNode) lastNode.innerHTML = md(regenerated.content);
+          messages.scrollTop = messages.scrollHeight;
+        });
 
         if (!regenerated.content) throw new Error('VANES returned an empty response.');
         save();
