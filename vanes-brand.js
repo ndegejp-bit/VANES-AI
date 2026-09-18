@@ -16,7 +16,7 @@
   if(theme&&!theme.dataset.vanesBound){theme.dataset.vanesBound='1';theme.addEventListener('click',e=>{e.preventDefault();applyTheme(document.body.classList.contains('dark')?'light':'dark');});}
   const upgrade=document.createElement('script');upgrade.src='vanes-product-upgrade.js?v=20260914d';document.body.appendChild(upgrade);
   upgrade.onload=()=>{
-    const context=document.createElement('script');context.src='/vanes-ai-context-fix.js?v=20260914c';document.body.appendChild(context);
-    const guard=document.createElement('script');guard.src='/vanes-profile-enforcer.js?v=20260914a';document.body.appendChild(guard);
+    const context=document.createElement('script');context.src='vanes-ai-context-fix.js?v=20260914c';document.body.appendChild(context);
+    const guard=document.createElement('script');guard.src='vanes-profile-enforcer.js?v=20260914a';document.body.appendChild(guard);
   };
 })();
