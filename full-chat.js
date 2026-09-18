@@ -170,21 +170,31 @@ You are an expert study assistant for learners following the Tanzanian secondary
   const upload=document.querySelector("#uploadButton");
   if(upload){let fileInput=document.querySelector("#imageInput");if(!fileInput){fileInput=document.createElement("input");fileInput.type="file";fileInput.id="imageInput";fileInput.accept="image/*";fileInput.hidden=true;document.body.append(fileInput);}upload.onclick=e=>{e.preventDefault();fileInput.click();};fileInput.onchange=()=>{const f=fileInput.files?.[0];if(!f)return;if(f.size>8*1024*1024){toast("Choose an image smaller than 8 MB.");return;}const r=new FileReader();r.onload=()=>{window.VANES_PENDING_IMAGE=r.result;const p=document.querySelector("#imagePreview");if(p){p.hidden=false;p.innerHTML=`<img src="${escape(r.result)}" alt="Study image preview" style="max-width:100%;max-height:150px;border-radius:8px"><span>Image attached — send a question or instruction.</span>`;}};r.readAsDataURL(f);};}
 
+  function wantsVideo(prompt){return /\\b(video|animation|animated|animate|motion|moving|movie|clip|cinematic|film|reel|transition|camera movement|time-lapse|timelapse|visual effect|vfx)\\b/i.test(prompt)}
+
   async function generateImage(){
     const prompt=input.value.trim();
-    if(!prompt){input.focus();toast("Describe the educational visual you want VANES to create.");return;}
-    // VANES uses Runway only for visual generation. Never send this prompt through normal chat.
+    if(!prompt){input.focus();toast("Describe the visual you want VANES to create.");return;}
     input.value="";
-    const runway=document.querySelector("#vanes-runway-open");
-    if(runway){
-      runway.click();
-      const runwayInput=document.querySelector("#vanes-runway-prompt");
-      if(runwayInput){runwayInput.value=prompt;runwayInput.focus();}
-      toast("Runway Creative Studio opened. Review the prompt and create your visual.");
-      return;
+    if(wantsVideo(prompt)){
+      const runway=document.querySelector("#vanes-runway-open");
+      if(runway){runway.click();const runwayInput=document.querySelector("#vanes-runway-prompt");if(runwayInput){runwayInput.value=prompt;runwayInput.focus();}toast("VANES detected a video request and opened Runway.");return;}
+      toast("Runway Creative Studio is still loading. Please try again in a moment.");return;
     }
-    toast("Runway Creative Studio is still loading. Please try again in a moment.");
+    ensureChat();const c=current();const user={role:"user",content:"Create this educational visual: "+prompt};c.messages.push(user);save();renderMessages();
+    const status=document.querySelector("#vanes-status");status.textContent="Creating image…";
+    try{const res=await fetch((window.VANES_IMAGE_ENDPOINT||"/api/image"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});const d=await res.json();if(!res.ok||!d.ok||!Array.isArray(d.images)||!d.images.length)throw new Error(d.error||"The image model did not return an image.");
+      const url=d.images[0];c.messages.push({role:"assistant",content:"<VANES_IMAGE>"+url+"</VANES_IMAGE>"});save();renderImageMessage(c.messages.length-1);toast("Image created with "+(d.model||"OpenRouter")+".");
+    }catch(e){c.messages.push({role:"assistant",content:"I couldn't create that image. "+(e.message||"Image generation failed.")});save();renderMessages();}
+    finally{status.textContent="Ready";}
   }
+
+  function renderImageMessage(index){
+    const c=current(),m=c.messages[index];if(!m)return;renderMessages();
+    const nodes=[...messagesEl.querySelectorAll(".coach-message")];const el=nodes[nodes.length-1];if(!el)return;
+    const bubble=el.querySelector(".vanes-content");if(!bubble)return;const match=String(m.content).match(/^<VANES_IMAGE>([\\s\\S]+)<\\/VANES_IMAGE>$/);if(match)bubble.innerHTML='<div>✦ Image created by VANES AI</div><img src="'+escape(match[1])+'" alt="AI-generated educational visual" style="display:block;max-width:100%;max-height:520px;margin-top:10px;border-radius:12px"><div class="vanes-actions"><button type="button" data-copy-image="1">Copy image URL</button></div>';const copy=el.querySelector("[data-copy-image]");if(copy)copy.onclick=()=>navigator.clipboard?.writeText(match[1]).then(()=>toast("Image URL copied"));
+  }
+
   const generate=document.querySelector("#generateButton");
   if(generate)generate.addEventListener("click",generateImage);
 
