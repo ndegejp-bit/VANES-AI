@@ -28,3 +28,9 @@ Enter the token in the dashboard to view anonymous users, event counts and recen
 
 ## Privacy
 VANES uses an anonymous browser identifier. Question/answer content is not sent for improvement unless the learner explicitly enables the anonymised-learning-data option in Settings. Names, phone numbers and payment credentials are not part of the analytics event payload.
+
+## 4. Automatic deployment
+A Cloudflare deployment workflow is included at .github/workflows/deploy-cloudflare.yml. To enable it without using Command Prompt, add these GitHub repository secrets under Settings → Secrets and variables → Actions:
+- CLOUDFLARE_API_TOKEN
+- CLOUDFLARE_ACCOUNT_ID
+Then add a repository variable named CLOUDFLARE_DEPLOY_ENABLED with value true. Future pushes to main will deploy the Worker automatically.
