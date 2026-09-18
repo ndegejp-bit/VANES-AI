@@ -47,7 +47,7 @@
       const contentType = response.headers.get('content-type') || '';
       if (!response.body || !contentType.includes('text/event-stream')) {
         const data = await response.json().catch(async function () { return { message: await response.text() }; });
-        const value = data.choices?.[0]?.message?.content || data.message || data.error || '';
+        const value = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || data.output_text || data.message || data.error || '';
         if (value) onPiece(String(value));
         return;
       }
@@ -58,7 +58,7 @@
         const chunk = await reader.read();
         if (chunk.done) break;
         buffer += decoder.decode(chunk.value, { stream: true });
-        const lines = buffer.split(/\\r?\\n/);
+        const lines = buffer.split(/\r?\n/);
         buffer = lines.pop() || '';
         for (const line of lines) {
           if (!line.startsWith('data:')) continue;
