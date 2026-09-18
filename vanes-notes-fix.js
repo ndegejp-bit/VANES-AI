@@ -48,6 +48,7 @@ document.addEventListener('click',e=>{
  openShelfSession(shelfRead().find(x=>x.id===card.dataset.shelfId));
 });
 window.VANES_RENDER_SHELF=shelfRender;
+window.VANES_START_STUDY_SESSION=(id)=>startSessionTimer(id);
 shelfRender();
 document.addEventListener('click',e=>{
  const btn=e.target.closest('#startPlan[data-study-start]');
@@ -90,9 +91,14 @@ function activeSession(){return read(ACTIVE_SESSION,null)}
 function startSessionTimer(shelfId){
  const items=read(SHELF,[]);
  const existing=items.find(x=>x.id===shelfId);
- const state={shelfId:shelfId||null,startedAt:Date.now(),baseSeconds:Number(existing?.elapsedSeconds)||0};
+ const now=Date.now();
+ const state={shelfId:shelfId||null,startedAt:now,baseSeconds:Number(existing?.elapsedSeconds)||0};
  write(ACTIVE_SESSION,state);
- const w=document.querySelector('#workspace');if(w)w.dataset.sessionStarted=String(state.startedAt);
+ if(shelfId&&existing){
+   sessionShelfUpdate(shelfId,{status:'In progress',lastStartedAt:now});
+ }
+ const w=document.querySelector('#workspace');if(w)w.dataset.sessionStarted=String(now);
+ const clock=document.querySelector('#liveSessionClock');clock?.classList.add('active');
  updateClock();
 }
 function elapsedSession(){
@@ -103,6 +109,8 @@ function updateClock(){
  const el=document.querySelector('#sessionClock');if(!el)return;
  const s=activeSession();
  el.textContent=formatClock(s?elapsedSession():0);
+ const panel=document.querySelector('#liveSessionClock');
+ if(panel)panel.classList.toggle('active',!!s);
 }
 function sessionShelfUpdate(id,patch){
  if(!id)return;
@@ -139,7 +147,7 @@ function complete(){
  const clock=document.querySelector('#sessionClock');if(clock)clock.textContent='00:00:00';
  refresh();
  window.showToast?.(`Session saved ✓ · ${formatClock(seconds)} studied · ${s.name} is ready on your shelf`);
- setTimeout(()=>{window.VANES_SWITCH_VIEW?.('planner');window.VANES_RENDER_SHELF?.()},650);
+ setTimeout(()=>{window.VANES_RENDER_SHELF?.();window.VANES_SWITCH_VIEW?.('planner');window.VANES_RENDER_SHELF?.()},650);
 }
 function boot(){
 setInterval(updateClock,250);
