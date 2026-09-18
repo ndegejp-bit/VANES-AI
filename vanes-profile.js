@@ -1,11 +1,12 @@
 /* VANES learner profile: level, combination and subject-specific study context. */
 (function(){
 'use strict';
-const PROFILE='vanes-learner-profile-v1';
+const PROFILE='vanes-learner-profile-v2';
+const LEGACY_PROFILE='vanes-learner-profile-v1';
 const O_LEVEL=['Kiswahili','English Language','Basic Mathematics','Basic Applied Mathematics','History','Geography','Chemistry','Physics','Biology','Civics','Information and Computer Studies','Commerce','Bookkeeping','Agriculture','Food and Nutrition','Fine Art','Music','French','Arabic','Bible Knowledge','Islamic Knowledge','Physical Education','Economics'];
 const COMBOS={PCM:['Physics','Chemistry','Advanced Mathematics'],PCB:['Physics','Chemistry','Biology'],PGM:['Physics','Geography','Advanced Mathematics'],CBG:['Chemistry','Biology','Geography'],CBA:['Chemistry','Biology','Advanced Mathematics'],CBN:['Chemistry','Biology','Nutrition'],EGM:['Economics','Geography','Advanced Mathematics'],ECA:['Economics','Commerce','Advanced Mathematics'],HGE:['History','Geography','Economics'],HGL:['History','Geography','Kiswahili'],HKL:['History','Kiswahili','English Language'],HKA:['History','Kiswahili','Arabic'],HEC:['History','Economics','Commerce'],HGLi:['History','Geography','English Language']};
-function read(){try{return JSON.parse(localStorage.getItem(PROFILE))||null}catch{return null}}
-function write(v){localStorage.setItem(PROFILE,JSON.stringify(v));localStorage.setItem('vanes-user-name',v.name)}
+function read(){try{return JSON.parse(localStorage.getItem(PROFILE)||localStorage.getItem(LEGACY_PROFILE))||null}catch{return null}}
+function write(v){const serialized=JSON.stringify(v);localStorage.setItem(PROFILE,serialized);localStorage.setItem(LEGACY_PROFILE,serialized);localStorage.setItem('vanes-user-name',v.name)}
 function selected(){const p=read();return p?.level==='A-Level'?(COMBOS[p.combination]||p.subjects||[]):(p?.subjects||O_LEVEL)}
 function context(){const p=read();if(!p)return '';const common=p.level==='A-Level'?'Historia ya Tanzania, Academic Communication':'';return `Learner profile: name=${p.name}; education level=${p.level}; combination=${p.combination||'O-Level'}; selected subjects=${selected().join(', ')}. ${common?'Common Advanced Level subjects that must remain available to this learner: '+common+'.':''} Personalise subject detection, examples, revision plans and explanations to this profile. Do not invent a subject outside the learner profile unless the learner explicitly asks for it.`}
 const nativeFetch=window.fetch.bind(window);window.fetch=function(input,init){const url=typeof input==='string'?input:(input?.url||'');if(!/\/api\/chat(?:\?|$)/.test(url)||!init?.body)return nativeFetch(input,init);try{const body=JSON.parse(init.body),messages=Array.isArray(body.messages)?body.messages:[];const c=context();if(c){const i=messages.findIndex(m=>m.role==='system');if(i>=0)messages[i]={...messages[i],content:`${messages[i].content||''}\n\n${c}`};else messages.unshift({role:'system',content:c});}return nativeFetch(input,{...init,body:JSON.stringify({...body,messages})})}catch{return nativeFetch(input,init)}};
