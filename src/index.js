@@ -48,8 +48,12 @@ async function handleChat(request,env){
           const raw=await upstream.text();
           let data;try{data=JSON.parse(raw)}catch{data={error:raw||"Invalid AI response."}};
           if(data?.error)return json({error:readableError(data.error,"AI provider returned an error.")},502,headers);
-          const content=extractText(data);
-          if(!content)return json({error:"The AI provider returned an empty response."},502,headers);
+          const content=extractText(data).trim();
+          if(!content){
+            lastStatus=502;
+            lastDetail="The selected AI model returned no answer content.";
+            continue;
+          }
           return json({choices:[{message:{role:"assistant",content}}],model},200,{...headers,"X-VANES-Model":model,"X-VANES-Max-Tokens":String(candidate)});
         }
         lastStatus=upstream.status;
